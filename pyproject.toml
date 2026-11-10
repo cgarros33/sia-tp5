@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# Script previo al esqueleto del proyecto, con su propio formato.
+extend-exclude = ["utils"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
