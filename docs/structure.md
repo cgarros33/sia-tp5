@@ -12,6 +12,7 @@ core/                  Training engine, problem-agnostic (NumPy only)
   callbacks.py         PrintProgress, EarlyStopping, AdaptiveEta
   augmentation.py      GaussianNoise, RandomShift, Compose (train batches only)
   autoencoder.py       Autoencoder(encoder, decoder): encode / decode / fit
+  vae.py               VariationalAutoencoder(Autoencoder): stochastic latent layer + KL term
 tests/                 pytest suite, one file per core module
 data/                  Datasets (font.h, flags_tricolor.csv)
 utils/                 Standalone data scripts (excluded from ruff)
@@ -46,6 +47,20 @@ X_rec = ae.decode(Z)  # (n, n_features)
 
 `Autoencoder` is a `Network` whose layers are the encoder's followed by the decoder's, so
 every `Network.fit` argument (batch size, validation, callbacks, metrics, l2, augment) applies.
+
+## Variational autoencoder
+
+```python
+encoder = Network([n_features, 16, 2 * 2], output_activation="identity", rng=rng)  # [mu, log var]
+decoder = Network([2, 16, n_features], output_activation="sigmoid", rng=rng)
+vae = VariationalAutoencoder(encoder, decoder, kl_weight=1.0)
+
+vae.fit(X, optimizer=Adam(), loss=MSE(), epochs=5000)  # train_loss is L + kl_weight * KL
+mu = vae.encode(X)  # mean of q(z/x), no sampling
+new = vae.sample(10)  # z ~ N(0, I) through the decoder
+```
+
+`predict` is stochastic (samples z); the noise-free reconstruction is `decode(encode(X))`.
 
 ## Commands
 
