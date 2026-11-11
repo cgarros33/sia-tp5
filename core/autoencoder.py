@@ -27,11 +27,15 @@ class Autoencoder(Network):
     sale del rng del encoder.
     """
 
+    # Salidas del encoder por cada dimensión del espacio latente.
+    encoder_outputs_per_latent = 1
+
     def __init__(self, encoder: Network, decoder: Network) -> None:
-        if encoder.layer_sizes[-1] != decoder.layer_sizes[0]:
+        expected = self.encoder_outputs_per_latent * decoder.layer_sizes[0]
+        if encoder.layer_sizes[-1] != expected:
             raise ValueError(
-                f"El encoder sale con {encoder.layer_sizes[-1]} dimensiones y el decoder "
-                f"espera {decoder.layer_sizes[0]}"
+                f"El encoder sale con {encoder.layer_sizes[-1]} dimensiones y se esperaban "
+                f"{expected} para un decoder con entrada de {decoder.layer_sizes[0]}"
             )
         if decoder.layer_sizes[-1] != encoder.layer_sizes[0]:
             raise ValueError(
@@ -46,7 +50,7 @@ class Autoencoder(Network):
 
     @property
     def latent_dim(self) -> int:
-        return self.encoder.layer_sizes[-1]
+        return self.decoder.layer_sizes[0]
 
     def encode(self, X: np.ndarray) -> np.ndarray:
         """X: (n_muestras, n_features). Devuelve Z, (n_muestras, latent_dim)."""

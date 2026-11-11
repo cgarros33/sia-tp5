@@ -215,13 +215,16 @@ class Network:
             cb.on_train_end(self)
         return history
 
-    def backward(self, y_true: np.ndarray, y_pred: np.ndarray, loss: Loss, l2: float = 0.0) -> None:
+    def backward(
+        self, y_true: np.ndarray, y_pred: np.ndarray, loss: Loss, l2: float = 0.0
+    ) -> np.ndarray:
         """Calcula grad_W y grad_b de todas las capas a partir del último predict.
 
         y_true e y_pred: (n_muestras, layer_sizes[-1]); y_pred tiene que ser la
         salida del predict inmediatamente anterior, que dejó x y z en cada capa.
         Con l2 > 0, al final suma l2 · W a cada grad_W (no a grad_b): es el
-        gradiente de loss + l2_penalty(l2).
+        gradiente de loss + l2_penalty(l2). Devuelve dL/dX, (n_muestras,
+        layer_sizes[0]), para seguir propagando hacia lo que haya antes de la red.
         """
         output = self.layers[-1]
         if isinstance(output.activation, Softmax):
@@ -240,6 +243,7 @@ class Network:
         if l2:
             for layer in self.layers:
                 layer.grad_W += l2 * layer.W
+        return grad
 
     def l2_penalty(self, l2: float) -> float:
         """l2/2 · Σ‖W‖² sobre todas las capas, sin los bias."""
