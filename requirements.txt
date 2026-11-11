@@ -1,0 +1,4 @@
+# Python 3.11+
+numpy==2.4.6
+pytest==8.3.5
+ruff==0.17.1
