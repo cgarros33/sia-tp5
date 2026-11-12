@@ -1,10 +1,11 @@
 import numpy as np
 import pytest
 
-from core.initializers import INITIALIZERS, He, Uniform, Xavier, get_initializer
+from core.initializers import INITIALIZERS, He, Normal, Uniform, Xavier, get_initializer
 
 ALL = [
     pytest.param(Uniform(), id="uniform"),
+    pytest.param(Normal(), id="normal"),
     pytest.param(Xavier(), id="xavier"),
     pytest.param(He(), id="he"),
 ]
@@ -64,6 +65,20 @@ def test_he_varianza_aproximada():
     assert W.mean() == pytest.approx(0.0, abs=5e-3)
 
 
+@pytest.mark.parametrize("std", [1.0, 0.1])
+def test_normal_media_cero_y_desvio_pedido(std):
+    # Con n_in = 200 el desvío no se escala (He daría 0.1): es el pedido.
+    W = Normal(std=std)(200, 500, np.random.default_rng(0))
+    # 100 000 muestras: el desvío empírico queda a menos de 1% del pedido.
+    assert W.std() == pytest.approx(std, rel=0.01)
+    assert W.mean() == pytest.approx(0.0, abs=5e-3 * std)
+
+
+def test_normal_desvio_invalido_falla():
+    with pytest.raises(ValueError):
+        Normal(std=0.0)
+
+
 def test_registro_construye_cada_inicializador():
     for name, cls in INITIALIZERS.items():
         assert isinstance(get_initializer(name), cls)
@@ -72,6 +87,7 @@ def test_registro_construye_cada_inicializador():
 def test_registro_pasa_parametros():
     init = get_initializer("uniform", low=-1.0, high=1.0)
     assert (init.low, init.high) == (-1.0, 1.0)
+    assert get_initializer("normal", std=0.5).std == 0.5
 
 
 def test_registro_nombre_desconocido_falla():

@@ -101,6 +101,23 @@ class ReLU:
         return np.where(z > 0.0, 1.0, 0.0)
 
 
+class LeakyReLU:
+    """f(z) = z si z > 0, alpha * z si no. Como ReLU, pero con pendiente alpha a la izquierda.
+
+    La pendiente no nula evita que una neurona quede "muerta" (derivada 0 para
+    todas las entradas). En z = 0 no es derivable; por convención f'(0) = alpha.
+    """
+
+    def __init__(self, alpha: float = 0.01) -> None:
+        self.alpha = alpha
+
+    def forward(self, z: np.ndarray) -> np.ndarray:
+        return np.where(z > 0.0, z, self.alpha * z)
+
+    def backward(self, z: np.ndarray) -> np.ndarray:
+        return np.where(z > 0.0, 1.0, self.alpha)
+
+
 class Softmax:
     """f(z)_i = exp(z_i) / sum_j exp(z_j), por fila. Cada fila suma 1.
 
@@ -130,6 +147,7 @@ ACTIVATIONS: Mapping[str, type] = MappingProxyType(
         "tanh": Tanh,
         "sigmoid": Sigmoid,
         "relu": ReLU,
+        "leaky_relu": LeakyReLU,
         "softmax": Softmax,
     }
 )

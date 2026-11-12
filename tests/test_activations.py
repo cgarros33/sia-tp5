@@ -4,6 +4,7 @@ import pytest
 from core.activations import (
     ACTIVATIONS,
     Identity,
+    LeakyReLU,
     ReLU,
     Sigmoid,
     Softmax,
@@ -61,6 +62,30 @@ def test_relu_derivada_en_cero_es_cero():
     assert ReLU().backward(np.array([[0.0]]))[0, 0] == 0.0
 
 
+@pytest.mark.parametrize("alpha", [0.01, 0.2])
+def test_leaky_relu_derivada_lejos_del_cero(alpha):
+    # Como en ReLU, z = 0 se excluye: ahí la numérica da (1 + alpha) / 2.
+    z = np.array([[-3.0, -1e-3, 1e-3, 3.0]])
+    leaky = LeakyReLU(alpha=alpha)
+    np.testing.assert_allclose(
+        leaky.backward(z), numerical_derivative(leaky.forward, z), rtol=0, atol=TOL
+    )
+
+
+def test_leaky_relu_valores_conocidos():
+    z = np.array([[-2.0, 0.0, 3.0]])
+    np.testing.assert_allclose(LeakyReLU().forward(z), [[-0.02, 0.0, 3.0]])
+    np.testing.assert_allclose(LeakyReLU(alpha=0.5).forward(z), [[-1.0, 0.0, 3.0]])
+
+
+def test_leaky_relu_derivada_en_cero_es_alpha():
+    assert LeakyReLU(alpha=0.1).backward(np.array([[0.0]]))[0, 0] == 0.1
+
+
+def test_leaky_relu_alpha_por_defecto():
+    assert LeakyReLU().alpha == 0.01
+
+
 def test_step_devuelve_mas_menos_uno():
     z = np.array([[-2.0, 0.0, 3.0]])
     np.testing.assert_array_equal(Step().forward(z), [[-1.0, 1.0, 1.0]])
@@ -113,6 +138,7 @@ def test_registro_construye_cada_activacion():
 
 def test_registro_pasa_parametros():
     assert get_activation("tanh", beta=2.0).beta == 2.0
+    assert get_activation("leaky_relu", alpha=0.2).alpha == 0.2
 
 
 def test_registro_nombre_desconocido_falla():
