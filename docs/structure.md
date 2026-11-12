@@ -2,21 +2,30 @@
 
 ```
 core/                  Training engine, problem-agnostic (NumPy only)
-  activations.py       Step, Identity, Tanh, Sigmoid, ReLU, Softmax
-  initializers.py      Uniform, Xavier, He
+  activations.py       Step, Identity, Tanh, Sigmoid, ReLU, LeakyReLU, Softmax
+  initializers.py      Uniform, Normal, Xavier, He
   layers.py            Dense layer: forward / backward
   losses.py            MSE, BinaryCrossEntropy, CategoricalCrossEntropy
   optimizers.py        GD, Momentum, RMSProp, Adam, AdaGrad
   network.py           Network: MLP with predict / backward / fit / evaluate
   history.py           Per-epoch training log, CSV export
-  callbacks.py         PrintProgress, EarlyStopping, AdaptiveEta
+  callbacks.py         PrintProgress, EarlyStopping, AdaptiveEta, StopAtTarget,
+                       ExponentialDecay, StepDecay
+  metrics.py           Wrong pixels after binarizing: per sample, max, mean
+  pca.py               PCA (NumPy SVD): fit / transform / inverse_transform
   augmentation.py      GaussianNoise, RandomShift, Compose (train batches only)
   autoencoder.py       Autoencoder(encoder, decoder): encode / decode / fit
   vae.py               VariationalAutoencoder(Autoencoder): stochastic latent layer + KL term
-tests/                 pytest suite, one file per core module
+ej1/                   Exercise 1a: basic autoencoder on font.h (spec: docs/context/ej1-autoencoder.md)
+  datos.py             cargar_font(): X (32, 35) in {0, 1} and the 32 labels
+  config.json          Sweep: base config, baselines, per-step grids, seeds, max epochs
+  barrido.py           Sequential sweep; writes only to resultados/ej1/
+  graficos.py          Figures; reads only from resultados/ej1/, writes resultados/ej1/figuras/
+tests/                 pytest suite, one file per core module (test_ej1_*.py for ej1/)
 data/                  Datasets (font.h, flags_tricolor.csv)
+resultados/ej1/        Sweep output: one CSV per step, elecciones.json, final/ (weights, history)
 utils/                 Standalone data scripts (excluded from ruff)
-docs/context/          Assignment and course notes (source of truth)
+docs/context/          Assignment, course notes and exercise specs (source of truth)
 check-cicd.py          Local CI: creates .venv, installs requirements, runs all checks
 .github/workflows/     Same checks on every push and pull request
 ```
@@ -67,3 +76,5 @@ new = vae.sample(10)  # z ~ N(0, I) through the decoder
 - Full local CI: `python3 check-cicd.py`
 - Lint and format: `ruff check . && ruff format --check .`
 - Tests: `python3 -m pytest -q`
+- Exercise 1a sweep: `python3 -m ej1.barrido` (resumable: steps whose CSV exists are skipped)
+- Exercise 1a figures: `python3 -m ej1.graficos`

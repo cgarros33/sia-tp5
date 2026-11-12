@@ -84,6 +84,9 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 Context files will be created later and referenced explicitly in this document. Do not invent structure, interfaces, or decisions that are absent from `docs/context/`; propose them and wait for approval.
 
+Context files:
+- [docs/context/ej1-autoencoder.md](docs/context/ej1-autoencoder.md): Exercise 1a (basic autoencoder on font.h): team decisions, sequential sweep, assumptions, phases and results.
+
 Workflow: short plan (files + tests) → wait for OK → tests first → code → tests and lint green → update the spec status → show changes, propose a commit message, wait for permission (section 0).
 
 ## 7. Language
