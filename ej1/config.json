@@ -1,0 +1,192 @@
+{
+  "semillas": [0, 1, 2, 3, 4],
+  "objetivo_peor_letra": 1,
+  "base": {
+    "ocultas": [30, 20, 10],
+    "latente": 2,
+    "activacion_ocultas": "tanh",
+    "activacion_latente": "identity",
+    "activacion_salida": "sigmoid",
+    "inicializacion": "xavier",
+    "optimizador": "adam",
+    "lr": 0.003,
+    "decaimiento": null,
+    "batch_size": 32,
+    "perdida": "binary_crossentropy",
+    "l2": 0.0,
+    "max_epocas": 10000
+  },
+  "lineas_de_base": [
+    {
+      "etiqueta": "ae_lineal",
+      "cambios": {
+        "ocultas": [],
+        "activacion_latente": "identity",
+        "activacion_salida": "identity",
+        "perdida": "mse",
+        "lr": 0.01,
+        "max_epocas": 5000
+      }
+    },
+    {"etiqueta": "sin_ocultas", "cambios": {"ocultas": []}}
+  ],
+  "pasos": [
+    {
+      "id": "1",
+      "nombre": "profundidad",
+      "valores": [
+        {"etiqueta": "sin ocultas", "cambios": {"ocultas": []}},
+        {"etiqueta": "30", "cambios": {"ocultas": [30]}},
+        {"etiqueta": "30-10", "cambios": {"ocultas": [30, 10]}},
+        {"etiqueta": "30-20-10", "cambios": {"ocultas": [30, 20, 10]}},
+        {"etiqueta": "30-23-17-10", "cambios": {"ocultas": [30, 23, 17, 10]}}
+      ]
+    },
+    {
+      "id": "2",
+      "nombre": "ancho",
+      "valores": [
+        {"etiqueta": "x0.5", "cambios": {"factor_ancho": 0.5}},
+        {"etiqueta": "x1", "cambios": {"factor_ancho": 1}},
+        {"etiqueta": "x2", "cambios": {"factor_ancho": 2}}
+      ]
+    },
+    {
+      "id": "3",
+      "nombre": "activacion_ocultas",
+      "valores": [
+        {"etiqueta": "tanh", "cambios": {"activacion_ocultas": "tanh"}},
+        {"etiqueta": "sigmoide", "cambios": {"activacion_ocultas": "sigmoid"}},
+        {"etiqueta": "relu", "cambios": {"activacion_ocultas": "relu"}},
+        {
+          "etiqueta": "leaky relu",
+          "cambios": {"activacion_ocultas": {"kind": "leaky_relu", "alpha": 0.01}}
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "nombre": "activacion_latente",
+      "valores": [
+        {"etiqueta": "lineal", "cambios": {"activacion_latente": "identity"}},
+        {"etiqueta": "tanh", "cambios": {"activacion_latente": "tanh"}}
+      ]
+    },
+    {
+      "id": "5",
+      "nombre": "inicializacion",
+      "valores": [
+        {
+          "etiqueta": "U(±0.1)",
+          "cambios": {"inicializacion": {"kind": "uniform", "low": -0.1, "high": 0.1}}
+        },
+        {
+          "etiqueta": "U(±1)",
+          "cambios": {"inicializacion": {"kind": "uniform", "low": -1.0, "high": 1.0}}
+        },
+        {"etiqueta": "N(0,1)", "cambios": {"inicializacion": {"kind": "normal", "std": 1.0}}},
+        {"etiqueta": "xavier", "cambios": {"inicializacion": "xavier"}},
+        {"etiqueta": "he", "cambios": {"inicializacion": "he"}}
+      ]
+    },
+    {
+      "id": "6+7",
+      "nombre": "optimizador_y_lr",
+      "valores": [
+        {"etiqueta": "gd 0.0003", "cambios": {"optimizador": "gd", "lr": 0.0003}},
+        {"etiqueta": "gd 0.001", "cambios": {"optimizador": "gd", "lr": 0.001}},
+        {"etiqueta": "gd 0.003", "cambios": {"optimizador": "gd", "lr": 0.003}},
+        {"etiqueta": "gd 0.01", "cambios": {"optimizador": "gd", "lr": 0.01}},
+        {"etiqueta": "gd 0.03", "cambios": {"optimizador": "gd", "lr": 0.03}},
+        {"etiqueta": "gd 0.1", "cambios": {"optimizador": "gd", "lr": 0.1}},
+        {"etiqueta": "gd 0.3", "cambios": {"optimizador": "gd", "lr": 0.3}},
+        {"etiqueta": "gd 1", "cambios": {"optimizador": "gd", "lr": 1.0}},
+        {
+          "etiqueta": "momentum 0.0003",
+          "cambios": {"optimizador": {"kind": "momentum", "alpha": 0.9}, "lr": 0.0003}
+        },
+        {
+          "etiqueta": "momentum 0.001",
+          "cambios": {"optimizador": {"kind": "momentum", "alpha": 0.9}, "lr": 0.001}
+        },
+        {
+          "etiqueta": "momentum 0.003",
+          "cambios": {"optimizador": {"kind": "momentum", "alpha": 0.9}, "lr": 0.003}
+        },
+        {
+          "etiqueta": "momentum 0.01",
+          "cambios": {"optimizador": {"kind": "momentum", "alpha": 0.9}, "lr": 0.01}
+        },
+        {
+          "etiqueta": "momentum 0.03",
+          "cambios": {"optimizador": {"kind": "momentum", "alpha": 0.9}, "lr": 0.03}
+        },
+        {
+          "etiqueta": "momentum 0.1",
+          "cambios": {"optimizador": {"kind": "momentum", "alpha": 0.9}, "lr": 0.1}
+        },
+        {
+          "etiqueta": "momentum 0.3",
+          "cambios": {"optimizador": {"kind": "momentum", "alpha": 0.9}, "lr": 0.3}
+        },
+        {
+          "etiqueta": "momentum 1",
+          "cambios": {"optimizador": {"kind": "momentum", "alpha": 0.9}, "lr": 1.0}
+        },
+        {"etiqueta": "adam 0.0003", "cambios": {"optimizador": "adam", "lr": 0.0003}},
+        {"etiqueta": "adam 0.001", "cambios": {"optimizador": "adam", "lr": 0.001}},
+        {"etiqueta": "adam 0.003", "cambios": {"optimizador": "adam", "lr": 0.003}},
+        {"etiqueta": "adam 0.01", "cambios": {"optimizador": "adam", "lr": 0.01}},
+        {"etiqueta": "adam 0.03", "cambios": {"optimizador": "adam", "lr": 0.03}},
+        {"etiqueta": "adam 0.1", "cambios": {"optimizador": "adam", "lr": 0.1}},
+        {"etiqueta": "adam 0.3", "cambios": {"optimizador": "adam", "lr": 0.3}},
+        {"etiqueta": "adam 1", "cambios": {"optimizador": "adam", "lr": 1.0}}
+      ]
+    },
+    {
+      "id": "8",
+      "nombre": "decaimiento_lr",
+      "valores": [
+        {"etiqueta": "ninguno", "cambios": {"decaimiento": null}},
+        {
+          "etiqueta": "exponencial",
+          "cambios": {"decaimiento": {"kind": "exponential", "rate": 0.999}}
+        },
+        {
+          "etiqueta": "escalonado",
+          "cambios": {"decaimiento": {"kind": "step", "factor": 0.5, "every": 250}}
+        }
+      ]
+    },
+    {
+      "id": "9",
+      "nombre": "tamano_lote",
+      "valores": [
+        {"etiqueta": "32", "cambios": {"batch_size": 32}},
+        {"etiqueta": "8", "cambios": {"batch_size": 8}},
+        {"etiqueta": "4", "cambios": {"batch_size": 4}},
+        {"etiqueta": "1", "cambios": {"batch_size": 1}}
+      ]
+    },
+    {
+      "id": "10",
+      "nombre": "perdida",
+      "valores": [
+        {"etiqueta": "bce", "cambios": {"perdida": "binary_crossentropy"}},
+        {"etiqueta": "mse", "cambios": {"perdida": "mse"}},
+        {"etiqueta": "mse lr×5", "cambios": {"perdida": "mse", "factor_lr": 5}}
+      ]
+    },
+    {
+      "id": "11",
+      "nombre": "l2",
+      "valores": [
+        {"etiqueta": "0", "cambios": {"l2": 0.0}},
+        {"etiqueta": "1e-5", "cambios": {"l2": 1e-5}},
+        {"etiqueta": "1e-4", "cambios": {"l2": 1e-4}},
+        {"etiqueta": "1e-3", "cambios": {"l2": 1e-3}}
+      ]
+    }
+  ],
+  "repetir_al_final": "3"
+}
