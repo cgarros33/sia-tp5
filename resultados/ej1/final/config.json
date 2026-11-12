@@ -1,0 +1,19 @@
+{
+  "ocultas": [
+    60,
+    40,
+    20
+  ],
+  "latente": 2,
+  "activacion_ocultas": "tanh",
+  "activacion_latente": "identity",
+  "activacion_salida": "sigmoid",
+  "inicializacion": "he",
+  "optimizador": "adam",
+  "lr": 0.01,
+  "decaimiento": null,
+  "batch_size": 32,
+  "perdida": "binary_crossentropy",
+  "l2": 0.0,
+  "max_epocas": 10000
+}
