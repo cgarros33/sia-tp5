@@ -244,3 +244,84 @@ class AdaptiveEta(Callback):
             self.optimizer.lr = max(self.optimizer.lr * (1.0 - self.b), self.min_lr)
             self._decreases = self._increases = 0
         return False
+
+
+class StopAtTarget(Callback):
+    """Corta apenas `monitor` alcanza `target` y guarda esa época en reached_epoch.
+
+    mode="min" llega con monitor <= target (p. ej. una pérdida o la cantidad de
+    errores); mode="max" llega con monitor >= target (p. ej. accuracy). Si nunca
+    llega, reached_epoch queda en None. Un NaN no cuenta como llegar.
+    """
+
+    def __init__(self, monitor: str, target: float, mode: str = "min") -> None:
+        if mode not in ("min", "max"):
+            raise ValueError(f"mode tiene que ser 'min' o 'max', llegó {mode!r}")
+        self.monitor = monitor
+        self.target = target
+        self.mode = mode
+        self.reached_epoch: int | None = None
+
+    def on_train_begin(self, network: "Network") -> None:
+        self.reached_epoch = None
+
+    def on_epoch_end(self, epoch: int, logs: dict[str, float], network: "Network") -> bool:
+        if self.monitor not in logs:
+            raise ValueError(
+                f"StopAtTarget monitorea {self.monitor!r}, que no está en los logs "
+                f"({sorted(logs)})."
+            )
+        value = logs[self.monitor]
+        if self.mode == "min":
+            reached = value <= self.target
+        else:
+            reached = value >= self.target
+        if reached:
+            self.reached_epoch = epoch
+        return bool(reached)
+
+
+def _check_has_lr(optimizer: "Optimizer") -> None:
+    if not hasattr(optimizer, "lr"):
+        raise ValueError(f"{type(optimizer).__name__} no tiene un atributo lr que ajustar")
+
+
+class ExponentialDecay(Callback):
+    """Decaimiento exponencial de η: al final de cada época, optimizer.lr ← lr · rate.
+
+    La época e entrena con lr₀ · rate^(e−1). Como en AdaptiveEta, el η nuevo se
+    usa desde la época siguiente.
+    """
+
+    def __init__(self, optimizer: "Optimizer", rate: float) -> None:
+        if not 0 < rate < 1:
+            raise ValueError(f"rate tiene que estar en (0, 1), llegó {rate}")
+        _check_has_lr(optimizer)
+        self.optimizer = optimizer
+        self.rate = rate
+
+    def on_epoch_end(self, epoch: int, logs: dict[str, float], network: "Network") -> bool:
+        self.optimizer.lr *= self.rate
+        return False
+
+
+class StepDecay(Callback):
+    """Decaimiento escalonado de η: al final de las épocas every, 2·every, …, lr ← lr · factor.
+
+    Como en AdaptiveEta, el η nuevo se usa desde la época siguiente.
+    """
+
+    def __init__(self, optimizer: "Optimizer", factor: float, every: int) -> None:
+        if not 0 < factor < 1:
+            raise ValueError(f"factor tiene que estar en (0, 1), llegó {factor}")
+        if every < 1:
+            raise ValueError(f"every tiene que ser >= 1, llegó {every}")
+        _check_has_lr(optimizer)
+        self.optimizer = optimizer
+        self.factor = factor
+        self.every = every
+
+    def on_epoch_end(self, epoch: int, logs: dict[str, float], network: "Network") -> bool:
+        if epoch % self.every == 0:
+            self.optimizer.lr *= self.factor
+        return False

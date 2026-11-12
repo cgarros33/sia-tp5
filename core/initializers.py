@@ -36,6 +36,22 @@ class Uniform:
         return rng.uniform(self.low, self.high, size=(n_in, n_out))
 
 
+class Normal:
+    """W ~ N(0, std²), independiente del tamaño de la capa.
+
+    Es la versión gaussiana de Uniform: el desvío no se escala con n_in, a
+    diferencia de He, que es la misma normal con std = sqrt(2 / n_in).
+    """
+
+    def __init__(self, std: float = 1.0) -> None:
+        if not std > 0:
+            raise ValueError(f"std tiene que ser positivo, llegó {std}")
+        self.std = std
+
+    def __call__(self, n_in: int, n_out: int, rng: np.random.Generator) -> np.ndarray:
+        return rng.normal(0.0, self.std, size=(n_in, n_out))
+
+
 class Xavier:
     """Glorot uniforme: W ~ U(−r, r) con r = sqrt(6 / (n_in + n_out)).
 
@@ -62,6 +78,7 @@ class He:
 INITIALIZERS: Mapping[str, type] = MappingProxyType(
     {
         "uniform": Uniform,
+        "normal": Normal,
         "xavier": Xavier,
         "he": He,
     }

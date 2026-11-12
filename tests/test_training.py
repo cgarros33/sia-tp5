@@ -4,7 +4,15 @@ import numpy as np
 import pytest
 
 from core.augmentation import GaussianNoise
-from core.callbacks import AdaptiveEta, Callback, EarlyStopping, PrintProgress
+from core.callbacks import (
+    AdaptiveEta,
+    Callback,
+    EarlyStopping,
+    ExponentialDecay,
+    PrintProgress,
+    StepDecay,
+    StopAtTarget,
+)
 from core.history import COLUMNS, History
 from core.losses import MSE
 from core.network import Network
@@ -395,6 +403,145 @@ def test_adaptive_eta_en_fit_la_columna_lr_refleja_los_cambios():
     expected = [0.01, 0.01, 0.01, 0.011, 0.011, 0.012, 0.012, 0.006, 0.006]
     np.testing.assert_allclose(history.column("lr"), expected)
     assert opt.lr == pytest.approx(0.003)
+
+
+# --- StopAtTarget ---
+
+
+def test_stop_at_target_corta_en_la_primera_epoca_que_llega():
+    losses = [3.0, 2.0, 1.0, 0.5, 0.2]
+    stop = StopAtTarget(monitor="train_loss", target=1.0)
+    X, y = linear_data(10)
+    history = linear_net().fit(X, y, GD(lr=0.01), MSE(), epochs=len(losses),
+                               callbacks=[FakeTrainLosses(losses), stop])  # fmt: skip
+    # Llegar es alcanzar el objetivo: 1.0 <= 1.0 ya cuenta.
+    assert stop.reached_epoch == 3
+    assert len(history) == 3
+
+
+def test_stop_at_target_sin_llegar_no_corta():
+    stop = StopAtTarget(monitor="train_loss", target=0.1)
+    X, y = linear_data(10)
+    history = linear_net().fit(X, y, GD(lr=0.01), MSE(), epochs=4,
+                               callbacks=[FakeTrainLosses([3.0, 2.0, 1.0, 0.5]), stop])  # fmt: skip
+    assert stop.reached_epoch is None
+    assert len(history) == 4
+
+
+def test_stop_at_target_modo_max():
+    stop = StopAtTarget(monitor="train_metric", target=0.9, mode="max")
+    stop.on_train_begin(None)
+    assert not stop.on_epoch_end(1, {"train_metric": 0.5}, None)
+    assert stop.on_epoch_end(2, {"train_metric": 0.95}, None)
+    assert stop.reached_epoch == 2
+
+
+def test_stop_at_target_con_metrica_real_en_fit():
+    X, y = linear_data(50)
+    stop = StopAtTarget(monitor="train_mae", target=0.05)
+    history = linear_net().fit(
+        X, y, GD(lr=0.1), MSE(), epochs=2000, callbacks=[stop], metrics={"mae": mean_abs_error}
+    )
+    mae = history.column("train_mae")
+    assert stop.reached_epoch == len(history) < 2000
+    assert mae[-1] <= 0.05 and np.all(mae[:-1] > 0.05)
+
+
+def test_stop_at_target_on_train_begin_reinicia():
+    stop = StopAtTarget(monitor="train_loss", target=1.0)
+    stop.on_epoch_end(1, {"train_loss": 0.5}, None)
+    stop.on_train_begin(None)
+    assert stop.reached_epoch is None
+
+
+def test_stop_at_target_monitor_ausente_falla():
+    stop = StopAtTarget(monitor="train_peor", target=1.0)
+    with pytest.raises(ValueError, match="train_peor"):
+        stop.on_epoch_end(1, {"train_loss": 0.5}, None)
+
+
+def test_stop_at_target_nan_no_cuenta_como_llegar():
+    stop = StopAtTarget(monitor="train_loss", target=1.0)
+    assert not stop.on_epoch_end(1, {"train_loss": np.nan}, None)
+    assert stop.reached_epoch is None
+
+
+def test_stop_at_target_modo_invalido_falla():
+    with pytest.raises(ValueError):
+        StopAtTarget(monitor="train_loss", target=1.0, mode="menor")
+
+
+# --- ExponentialDecay y StepDecay ---
+
+
+def lr_after_epochs(callback, n_epochs: int) -> list[float]:
+    """Llama on_epoch_end n veces; devuelve el lr del optimizador tras cada época."""
+    callback.on_train_begin(None)
+    out = []
+    for epoch in range(1, n_epochs + 1):
+        callback.on_epoch_end(epoch, {"train_loss": 1.0}, None)
+        out.append(callback.optimizer.lr)
+    return out
+
+
+def test_exponential_decay_multiplica_por_rate_cada_epoca():
+    lrs = lr_after_epochs(ExponentialDecay(GD(lr=1.0), rate=0.5), 4)
+    np.testing.assert_allclose(lrs, [0.5, 0.25, 0.125, 0.0625])
+
+
+def test_exponential_decay_en_fit_la_epoca_e_entrena_con_lr0_por_rate_a_la_e_menos_1():
+    opt = Adam(lr=0.01)
+    X, y = linear_data(10)
+    history = linear_net().fit(X, y, opt, MSE(), epochs=5,
+                               callbacks=[ExponentialDecay(opt, rate=0.9)])  # fmt: skip
+    np.testing.assert_allclose(history.column("lr"), 0.01 * 0.9 ** np.arange(5))
+    assert opt.lr == pytest.approx(0.01 * 0.9**5)
+
+
+def test_step_decay_multiplica_por_factor_cada_every_epocas():
+    lrs = lr_after_epochs(StepDecay(GD(lr=1.0), factor=0.5, every=2), 5)
+    np.testing.assert_allclose(lrs, [1.0, 0.5, 0.5, 0.25, 0.25])
+
+
+def test_step_decay_en_fit():
+    opt = GD(lr=0.08)
+    X, y = linear_data(10)
+    history = linear_net().fit(X, y, opt, MSE(), epochs=7,
+                               callbacks=[StepDecay(opt, factor=0.5, every=3)])  # fmt: skip
+    # El cambio decidido al final de la época 3 aparece en la fila 4.
+    expected = [0.08, 0.08, 0.08, 0.04, 0.04, 0.04, 0.02]
+    np.testing.assert_allclose(history.column("lr"), expected)
+
+
+@pytest.mark.parametrize("rate", [0.0, 1.0, 1.5, -0.5])
+def test_exponential_decay_rate_invalido_falla(rate):
+    with pytest.raises(ValueError):
+        ExponentialDecay(GD(), rate=rate)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{"factor": 0.0}, {"factor": 1.0}, {"every": 0}],
+    ids=lambda kw: f"{next(iter(kw))}={next(iter(kw.values()))}",
+)
+def test_step_decay_parametros_invalidos(kwargs):
+    params = {"factor": 0.5, "every": 10} | kwargs
+    with pytest.raises(ValueError):
+        StepDecay(GD(), **params)
+
+
+@pytest.mark.parametrize(
+    "build",
+    [lambda o: ExponentialDecay(o, rate=0.9), lambda o: StepDecay(o, factor=0.5, every=2)],
+    ids=["exponential", "step"],
+)
+def test_decay_sin_lr_falla(build):
+    class NoLr:
+        def step(self, params, grads):
+            pass
+
+    with pytest.raises(ValueError, match="lr"):
+        build(NoLr())
 
 
 # --- Extensiones de fit (F04-T3) ---
