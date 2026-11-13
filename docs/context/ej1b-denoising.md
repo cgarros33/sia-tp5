@@ -165,9 +165,10 @@ En `ej1/`:
    elegido frente a las tres referencias.
 4. Ejemplos visuales: para algunas letras y cada p_test, tres filas con la letra limpia, la
    letra con ruido y la reconstrucción del DAE.
-5. Espacio latente del DAE con latente 2, si en A gana el latente 2 o si se lo incluye igual:
-   las letras ruidosas coloreadas por letra de origen, con los códigos de las letras limpias
-   encima. Muestra si el encoder agrupa las versiones ruidosas cerca de su letra.
+5. Espacio latente del DAE con latente 2 del experimento A, aunque no gane: las letras
+   ruidosas coloreadas por letra de origen y unidas a ella con un segmento, con los códigos de
+   las letras limpias encima. Muestra si el encoder agrupa las versiones ruidosas cerca de su
+   letra.
 
 ## Fases
 
@@ -207,10 +208,12 @@ En `ej1/`:
   config final se reentrena con las 5 semillas. Es determinístico: da los mismos pesos que la
   corrida de B, y el smoke test lo verifica.
 - **Figuras:** se guardan en `resultados/ej1b/figuras/`: `01_latente.png`,
-  `02_ruido_entrenamiento.png`, `03_final_test.png`, `04_ejemplos.png` y, solo si la config
-  final tiene latente 2, `05_latente_dae.png`. Las figuras 4 y 5 usan el DAE final con la
-  menor semilla y las letras de test, que se regeneran con su semilla fija. La figura 4 muestra
-  la primera copia ruidosa de «a e g k m s l |» con cada p > 0, y la figura 5 usa p = 0,1.
+  `02_ruido_entrenamiento.png`, `03_final_test.png`, `04_ejemplos.png` y
+  `05_latente_dae.png`. Las figuras 4 y 5 usan la menor semilla y las letras de test, que se
+  regeneran con su semilla fija. La figura 4 usa el DAE final y muestra la primera copia
+  ruidosa de «a e g k m s l |» con cada p > 0. La figura 5 usa el latente 2 del experimento A,
+  con p = 0,1. Para eso, A tiene `"guardar_pesos": ["2"]` en la config, y `dae.py` guarda esos
+  pesos en `pesos/A_2_semilla_<s>.npz`, porque el script de gráficos no entrena.
 - **Sin currículum:** no se prueba un p que suba o baje con las épocas. Habría que barrer
   también ese schedule, y el p sorteado por muestra (`mixto`) ya pone todos los niveles en
   cada lote.

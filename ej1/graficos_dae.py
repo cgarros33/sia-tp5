@@ -14,6 +14,7 @@ from pathlib import Path
 
 import matplotlib
 import numpy as np
+from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap
 from matplotlib.figure import Figure
 
@@ -235,15 +236,18 @@ def fig_ejemplos(
     return fig
 
 
-# --- 5. Espacio latente del DAE (solo con latente 2) ---
+# --- 5. Espacio latente del DAE con latente 2 (experimento A) ---
 
 
 def fig_latente_dae(
-    Z_ruidosas: np.ndarray, idx: np.ndarray, Z_limpias: np.ndarray, etiquetas, semilla, p
+    Z_ruidosas: np.ndarray, idx: np.ndarray, Z_limpias: np.ndarray, etiquetas, titulo: str
 ) -> Figure:
     fig = Figure(figsize=(7.5, 6.5), layout="constrained")
     ax = fig.subplots()
     colores = np.array([SERIES[i % len(SERIES)] for i in range(len(etiquetas))])
+    # Cada código ruidoso unido al de su letra limpia: muestra cuánto lo corre el ruido.
+    segmentos = np.stack([Z_ruidosas, Z_limpias[idx]], axis=1)
+    ax.add_collection(LineCollection(segmentos, colors=colores[idx], linewidths=0.5, alpha=0.2))
     ax.scatter(Z_ruidosas[:, 0], Z_ruidosas[:, 1], s=6, c=colores[idx], alpha=0.35, linewidths=0)
     ax.scatter(Z_limpias[:, 0], Z_limpias[:, 1], s=26, color=TINTA, zorder=3)
     for (z1, z2), e in zip(Z_limpias, etiquetas, strict=True):
@@ -251,11 +255,7 @@ def fig_latente_dae(
     ax.set_aspect("equal", adjustable="datalim")
     ax.set_xlabel("z₁")
     ax.set_ylabel("z₂")
-    _titulo(
-        fig,
-        f"Latente del DAE (semilla {semilla}): letras de test con p = {p:g} (color = letra de "
-        "origen) y letras limpias (negro)",
-    )
+    _titulo(fig, titulo)
     return fig
 
 
@@ -316,12 +316,18 @@ def generar_figuras(resultados: Path) -> list[Path]:
         fig = fig_ejemplos(X, columnas, ruidosas, reconstruidas, semilla)
         _guardar(fig, figuras / "04_ejemplos.png", escritas)
 
-        if config["latente"] == 2:
-            X_r, idx = conjuntos[NIVEL_LATENTE]
-            fig = fig_latente_dae(
-                ae.encode(X_r), idx, ae.encode(X), etiquetas, semilla, NIVEL_LATENTE
-            )
-            _guardar(fig, figuras / "05_latente_dae.png", escritas)
+        # 5. Latente 2 del experimento A, con sus pesos guardados y la menor semilla.
+        fila_2 = next(f for f in filas["A"] if f["valor"] == "2" and f["semilla"] == semilla)
+        ruta_pesos = resultados / "pesos" / f"A_2_semilla_{semilla}.npz"
+        ae_2 = cargar_modelo(fila_2["config"], ruta_pesos, X.shape[1])
+        X_r, idx = conjuntos[NIVEL_LATENTE]
+        titulo = (
+            f"Latente del DAE con latente 2 (experimento A, ruido {fila_2['config']['ruido']}, "
+            f"semilla {semilla})\nletras de test con p = {NIVEL_LATENTE:g} coloreadas por letra "
+            "de origen y unidas a ella; en negro, las letras limpias"
+        )
+        fig = fig_latente_dae(ae_2.encode(X_r), idx, ae_2.encode(X), etiquetas, titulo)
+        _guardar(fig, figuras / "05_latente_dae.png", escritas)
     return escritas
 
 

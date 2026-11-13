@@ -9,6 +9,8 @@ ganador. Solo escribe en la carpeta de salida:
 
     experimento_A_latente.csv, ...   una fila por corrida (valor × semilla)
     referencias_validacion.csv       nada, vecino más cercano y AE del 1a
+    pesos/<exp>_<valor>_semilla_<s>.npz   pesos de los valores en "guardar_pesos"
+                                     (el latente 2 de A, para la figura 5)
     elecciones.json                  qué ganó en cada experimento y por qué
     final/                           config elegida: config.json,
                                      pesos_semilla_<s>.npz, historia_semilla_<s>.csv
@@ -322,10 +324,16 @@ def correr_dae(config_dae: dict, salida: Path, escribir: Callable[[str], None] =
             return filas
 
         filas = []
+        guardar = exp.get("guardar_pesos", [])
+        if guardar:
+            (salida / "pesos").mkdir(exist_ok=True)
         for etiqueta, config_valor in esperadas.items():
             validacion = validacion_para(config_valor["ruido"], val, X)
             for semilla in semillas:
                 ae, _, info = entrenar_dae(config_valor, X, semilla, validacion)
+                if etiqueta in guardar:
+                    ruta_pesos = salida / "pesos" / f"{exp['id']}_{etiqueta}_semilla_{semilla}.npz"
+                    _guardar_pesos(ae, ruta_pesos)
                 fila = {"experimento": exp["id"], "valor": etiqueta, "semilla": semilla, **info}
                 for p, medidas in evaluar(ae.predict, val, X).items():
                     for m in MEDIDAS:
@@ -371,6 +379,14 @@ def correr_dae(config_dae: dict, salida: Path, escribir: Callable[[str], None] =
     return json.loads(texto)
 
 
+def _guardar_pesos(ae: Autoencoder, ruta: Path) -> None:
+    """W<i> y b<i> de cada capa, como los lee cargar_modelo."""
+    pesos = {}
+    for i, capa in enumerate(ae.layers):
+        pesos[f"W{i}"], pesos[f"b{i}"] = capa.W, capa.b
+    np.savez(ruta, **pesos)
+
+
 def _guardar_final(
     config: dict,
     X: np.ndarray,
@@ -400,10 +416,7 @@ def _guardar_final(
     modelos = {}
     for semilla in semillas:
         ae, historia, info = entrenar_dae(config, X, semilla, validacion)
-        pesos = {}
-        for i, capa in enumerate(ae.layers):
-            pesos[f"W{i}"], pesos[f"b{i}"] = capa.W, capa.b
-        np.savez(carpeta / f"pesos_semilla_{semilla}.npz", **pesos)
+        _guardar_pesos(ae, carpeta / f"pesos_semilla_{semilla}.npz")
         historia.to_csv(carpeta / f"historia_semilla_{semilla}.csv")
         modelos[semilla] = ae
         escribir(

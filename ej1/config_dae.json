@@ -24,6 +24,7 @@
     {
       "id": "A",
       "nombre": "latente",
+      "guardar_pesos": ["2"],
       "valores": [
         {"etiqueta": "2", "cambios": {"latente": 2}},
         {"etiqueta": "4", "cambios": {"latente": 4}},

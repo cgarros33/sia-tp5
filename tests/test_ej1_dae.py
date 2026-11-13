@@ -251,12 +251,20 @@ def test_dae_mini_escribe_todo_y_se_puede_retomar(tmp_path, monkeypatch):
         fila_b["val_pixeles_mal_0.1"]
     )
 
+    # Pesos del latente 2 de A: se guardan y reproducen su fila; los del latente 4, no.
+    pesos_a = salida / "pesos" / "A_2_semilla_0.npz"
+    assert pesos_a.exists() and not (salida / "pesos" / "A_4_semilla_0.npz").exists()
+    fila_a = next(f for f in a if f["valor"] == "2")
+    ae_a = dae.cargar_modelo(fila_a["config"], pesos_a, X.shape[1])
+    assert medir_limpieza(X, idx, ae_a.predict(X_v))["pixeles_mal"] == pytest.approx(
+        fila_a["val_pixeles_mal_0.1"]
+    )
+
     # Figuras: solo leen lo escrito.
     escritas = generar_figuras(salida)
     nombres = {r.name for r in escritas}
     assert {"01_latente.png", "02_ruido_entrenamiento.png", "03_final_test.png"} <= nombres
-    assert "04_ejemplos.png" in nombres
-    assert ("05_latente_dae.png" in nombres) == (esperada["latente"] == 2)
+    assert {"04_ejemplos.png", "05_latente_dae.png"} <= nombres
     assert all(r.stat().st_size > 0 for r in escritas)
 
     # Retomar: con todo escrito no se entrena nada y las elecciones salen iguales.
