@@ -13,17 +13,22 @@ core/                  Training engine, problem-agnostic (NumPy only)
                        ExponentialDecay, StepDecay
   metrics.py           Wrong pixels after binarizing: per sample, max, mean
   pca.py               PCA (NumPy SVD): fit / transform / inverse_transform
-  augmentation.py      GaussianNoise, RandomShift, Compose (train batches only)
+  augmentation.py      GaussianNoise, RandomShift, BitFlip, Compose (train batches only)
   autoencoder.py       Autoencoder(encoder, decoder): encode / decode / fit
   vae.py               VariationalAutoencoder(Autoencoder): stochastic latent layer + KL term
 ej1/                   Exercise 1a: basic autoencoder on font.h (spec: docs/context/ej1-autoencoder.md)
+                       and 1b: denoising autoencoder (spec: docs/context/ej1b-denoising.md)
   datos.py             cargar_font(): X (32, 35) in {0, 1} and the 32 labels
   config.json          Sweep: base config, baselines, per-step grids, seeds, max epochs
   barrido.py           Sequential sweep; writes only to resultados/ej1/
   graficos.py          Figures; reads only from resultados/ej1/, writes resultados/ej1/figuras/
+  config_dae.json      1b: base config, noise levels, noisy val/test seeds, experiment grids
+  dae.py               1b experiments; writes only to resultados/ej1b/
+  graficos_dae.py      1b figures; reads only from resultados/ej1b/, writes resultados/ej1b/figuras/
 tests/                 pytest suite, one file per core module (test_ej1_*.py for ej1/)
 data/                  Datasets (font.h, flags_tricolor.csv)
 resultados/ej1/        Sweep output: one CSV per step, elecciones.json, final/ (weights, history)
+resultados/ej1b/       1b output: one CSV per experiment, elecciones.json, final/ (weights, test.csv)
 utils/                 Standalone data scripts (excluded from ruff)
 docs/context/          Assignment, course notes and exercise specs (source of truth)
 check-cicd.py          Local CI: creates .venv, installs requirements, runs all checks
@@ -78,3 +83,5 @@ new = vae.sample(10)  # z ~ N(0, I) through the decoder
 - Tests: `python3 -m pytest -q`
 - Exercise 1a sweep: `python3 -m ej1.barrido` (resumable: steps whose CSV exists are skipped)
 - Exercise 1a figures: `python3 -m ej1.graficos`
+- Exercise 1b experiments: `python3 -m ej1.dae` (resumable, like the 1a sweep)
+- Exercise 1b figures: `python3 -m ej1.graficos_dae`

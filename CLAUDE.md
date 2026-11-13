@@ -86,6 +86,7 @@ Context files will be created later and referenced explicitly in this document. 
 
 Context files:
 - [docs/context/ej1-autoencoder.md](docs/context/ej1-autoencoder.md): Exercise 1a (basic autoencoder on font.h): team decisions, sequential sweep, assumptions, phases and results.
+- [docs/context/ej1b-denoising.md](docs/context/ej1b-denoising.md): Exercise 1b (denoising AE on font.h): bit-flip noise (fixed and mixed levels), latent-dim study, noisy val/test sets, phases and results.
 
 Workflow: short plan (files + tests) → wait for OK → tests first → code → tests and lint green → update the spec status → show changes, propose a commit message, wait for permission (section 0).
 
