@@ -174,7 +174,7 @@ En `ej1/`:
 |---|------|--------|
 | 1 | Spec aprobado, referencia en CLAUDE.md §6, docs/structure.md | hecha |
 | 2 | core: `BitFlip` + tests | hecha |
-| 3 | ej1: conjuntos ruidosos de validación y test, y referencias + tests | pendiente |
+| 3 | ej1: conjuntos ruidosos de validación y test, y referencias + tests | hecha |
 | 4 | ej1: config + `dae.py` + smoke test | pendiente |
 | 5 | ej1: `graficos_dae.py` | pendiente |
 | 6 | Corrida completa, figuras y resultados en este spec | pendiente |
@@ -187,6 +187,13 @@ En `ej1/`:
 - Con lote completo, cada época ve 32 letras ruidosas, una por letra. Si eso hace que el
   entrenamiento sea muy lento o muy ruidoso, se puede repetir X k veces por época. Eso se
   decide después de la fase 4 y queda anotado acá.
+- **Conjuntos ruidosos:** un solo generador, `default_rng(semilla)`, recorre los niveles en el
+  orden de la config. Las k copias de cada letra van intercaladas (`np.tile`), y un vector
+  `idx` dice de qué letra limpia sale cada fila. Todo esto vive en `ej1/dae.py`
+  (`conjuntos_ruidosos`, `medir_limpieza`, `vecino_mas_cercano`, `cargar_ae_1a`).
+- **Vecino más cercano:** en un empate de distancia gana la letra de menor índice. El vecino más
+  cercano no es infalible ni con poco ruido: «l» y «|» están a solo 2 píxeles, así que un único
+  píxel invertido puede dejar la entrada a la misma distancia de las dos.
 - **Sin currículum:** no se prueba un p que suba o baje con las épocas. Habría que barrer
   también ese schedule, y el p sorteado por muestra (`mixto`) ya pone todos los niveles en
   cada lote.
