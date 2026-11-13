@@ -97,6 +97,34 @@ def _shift_slices(d: int, size: int) -> tuple[slice, slice]:
     return slice(0, size + d), slice(-d, size)
 
 
+class BitFlip:
+    """Invierte cada elemento (x' = 1 − x) con probabilidad p; pensado para datos en {0, 1}.
+
+    p es un float (el mismo nivel para todas las filas) o un par (p_min, p_max):
+    en ese caso cada fila sortea su propio p ~ U(p_min, p_max), así un mismo
+    lote mezcla niveles de ruido.
+    """
+
+    def __init__(self, p: float | Sequence[float]) -> None:
+        if isinstance(p, Sequence):
+            if len(p) != 2:
+                raise ValueError(f"p tiene que ser un float o un par (p_min, p_max), llegó {p}")
+            p = (float(p[0]), float(p[1]))
+            if not 0.0 <= p[0] <= p[1] <= 1.0:
+                raise ValueError(f"p tiene que cumplir 0 <= p_min <= p_max <= 1, llegó {p}")
+        elif not 0.0 <= p <= 1.0:
+            raise ValueError(f"p tiene que estar en [0, 1], llegó {p}")
+        self.p = p
+
+    def __call__(self, X: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+        if isinstance(self.p, tuple):
+            p = rng.uniform(*self.p, size=(X.shape[0], 1))
+        else:
+            p = self.p
+        invertir = rng.random(X.shape) < p
+        return np.where(invertir, 1.0 - X, X)
+
+
 class Compose:
     """Aplica varias augmentations en orden, todas con el mismo generador."""
 
@@ -114,6 +142,7 @@ AUGMENTATIONS: Mapping[str, type] = MappingProxyType(
     {
         "gaussian_noise": GaussianNoise,
         "random_shift": RandomShift,
+        "bit_flip": BitFlip,
     }
 )
 

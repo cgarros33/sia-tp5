@@ -3,6 +3,7 @@ import pytest
 
 from core.augmentation import (
     AUGMENTATIONS,
+    BitFlip,
     Compose,
     GaussianNoise,
     RandomShift,
@@ -25,6 +26,8 @@ ALL = [
     GaussianNoise(sigma=0.1),
     GaussianNoise(sigma=0.1, clip=(0.0, 1.0)),
     RandomShift(max_px=1, image_shape=(3, 3)),
+    BitFlip(p=0.2),
+    BitFlip(p=(0.0, 0.3)),
     Compose([RandomShift(max_px=1, image_shape=(3, 3)), GaussianNoise(sigma=0.1)]),
 ]
 
@@ -133,6 +136,51 @@ def test_shift_parametros_invalidos(kwargs):
         RandomShift(**kwargs)
 
 
+# --- BitFlip ---
+
+
+def binarias(n: int, d: int, seed: int = 1) -> np.ndarray:
+    return rng(seed).integers(0, 2, size=(n, d)).astype(float)
+
+
+def test_bitflip_p_cero_es_identidad_y_p_uno_invierte_todo():
+    X = binarias(20, 35)
+    out = BitFlip(p=0.0)(X, rng())
+    np.testing.assert_array_equal(out, X)
+    assert out is not X
+    np.testing.assert_array_equal(BitFlip(p=1.0)(X, rng()), 1.0 - X)
+
+
+def test_bitflip_salida_binaria_y_tasa_cercana_a_p():
+    X = binarias(400, 35)
+    out = BitFlip(p=0.1)(X, rng())
+    assert set(np.unique(out)) <= {0.0, 1.0}
+    assert (out != X).mean() == pytest.approx(0.1, abs=0.005)
+
+
+def test_bitflip_con_rango_sortea_un_p_por_fila():
+    X = binarias(500, 2000)
+    tasas = (BitFlip(p=(0.0, 1.0))(X, rng()) != X).mean(axis=1)
+    # Con 2000 píxeles por fila la tasa de cada fila es casi su p: se reparten en [0, 1].
+    assert tasas.min() < 0.05 and tasas.max() > 0.95
+    assert tasas.mean() == pytest.approx(0.5, abs=0.05)  # desvío de la media ≈ 0,013
+
+    tasas = (BitFlip(p=(0.0, 0.3))(X, rng()) != X).mean(axis=1)
+    assert tasas.max() < 0.33
+    assert tasas.mean() == pytest.approx(0.15, abs=0.02)
+
+
+def test_bitflip_rango_degenerado_es_p_fijo():
+    X = binarias(400, 35)
+    assert (BitFlip(p=(0.2, 0.2))(X, rng()) != X).mean() == pytest.approx(0.2, abs=0.01)
+
+
+@pytest.mark.parametrize("p", [-0.1, 1.1, (0.3, 0.1), (-0.1, 0.2), (0.1, 1.2), (0.1,)])
+def test_bitflip_parametros_invalidos(p):
+    with pytest.raises(ValueError):
+        BitFlip(p=p)
+
+
 # --- Compose y registro ---
 
 
@@ -159,7 +207,11 @@ def test_get_augmentation_desde_config():
     )
     assert isinstance(aug, Compose)
     assert [type(a) for a in aug.augmentations] == [RandomShift, GaussianNoise]
-    assert set(AUGMENTATIONS) == {"gaussian_noise", "random_shift"}
+    aug = get_augmentation({"kind": "bit_flip", "p": [0.0, 0.3]})
+    assert isinstance(aug, BitFlip) and aug.p == (0.0, 0.3)
+    assert get_augmentation({"kind": "bit_flip", "p": 0.1}).p == 0.1
+
+    assert set(AUGMENTATIONS) == {"gaussian_noise", "random_shift", "bit_flip"}
 
 
 @pytest.mark.parametrize(
