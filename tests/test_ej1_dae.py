@@ -20,6 +20,7 @@ from ej1.dae import (
     vecino_mas_cercano,
 )
 from ej1.datos import cargar_font
+from ej1.graficos_dae import generar_figuras
 
 CONFIG = json.loads(RUTA_CONFIG.read_text(encoding="utf-8"))
 BASE = CONFIG["base"]
@@ -249,6 +250,14 @@ def test_dae_mini_escribe_todo_y_se_puede_retomar(tmp_path, monkeypatch):
     assert medir_limpieza(X, idx, ae.predict(X_v))["pixeles_mal"] == pytest.approx(
         fila_b["val_pixeles_mal_0.1"]
     )
+
+    # Figuras: solo leen lo escrito.
+    escritas = generar_figuras(salida)
+    nombres = {r.name for r in escritas}
+    assert {"01_latente.png", "02_ruido_entrenamiento.png", "03_final_test.png"} <= nombres
+    assert "04_ejemplos.png" in nombres
+    assert ("05_latente_dae.png" in nombres) == (esperada["latente"] == 2)
+    assert all(r.stat().st_size > 0 for r in escritas)
 
     # Retomar: con todo escrito no se entrena nada y las elecciones salen iguales.
     def no_entrenar(*args, **kwargs):

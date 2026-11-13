@@ -177,7 +177,7 @@ En `ej1/`:
 | 2 | core: `BitFlip` + tests | hecha |
 | 3 | ej1: conjuntos ruidosos de validación y test, y referencias + tests | hecha |
 | 4 | ej1: config + `dae.py` + smoke test | hecha |
-| 5 | ej1: `graficos_dae.py` | pendiente |
+| 5 | ej1: `graficos_dae.py` | hecha |
 | 6 | Corrida completa, figuras y resultados en este spec | pendiente |
 
 ## Supuestos
@@ -206,6 +206,11 @@ En `ej1/`:
   `test.csv` (modelo, semilla, nivel y medidas, para el DAE y las tres referencias). La
   config final se reentrena con las 5 semillas. Es determinístico: da los mismos pesos que la
   corrida de B, y el smoke test lo verifica.
+- **Figuras:** se guardan en `resultados/ej1b/figuras/`: `01_latente.png`,
+  `02_ruido_entrenamiento.png`, `03_final_test.png`, `04_ejemplos.png` y, solo si la config
+  final tiene latente 2, `05_latente_dae.png`. Las figuras 4 y 5 usan el DAE final con la
+  menor semilla y las letras de test, que se regeneran con su semilla fija. La figura 4 muestra
+  la primera copia ruidosa de «a e g k m s l |» con cada p > 0, y la figura 5 usa p = 0,1.
 - **Sin currículum:** no se prueba un p que suba o baje con las épocas. Habría que barrer
   también ese schedule, y el p sorteado por muestra (`mixto`) ya pone todos los niveles en
   cada lote.
