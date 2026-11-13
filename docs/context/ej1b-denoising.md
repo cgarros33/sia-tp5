@@ -121,7 +121,8 @@ Cómo se elige en A y en B, siempre con el conjunto de **validación**:
 1. Menor promedio de píxeles mal, promediado sobre los p_test ∈ {0,05, 0,1, 0,2, 0,3}
    (p_test = 0 no se cuenta).
 2. Si empatan: más % de letras recuperadas sobre esos mismos niveles.
-3. Si siguen empatados: se queda el valor de la config del 1a, o el más chico.
+3. Si siguen empatados: se queda el valor actual de la config (en A, el latente 2 del 1a; en
+   B, p = 0,1); si no está entre los empatados, el primero de la grilla.
 
 Son 20 corridas en A y 30 en B, más la evaluación de las referencias.
 
@@ -175,7 +176,7 @@ En `ej1/`:
 | 1 | Spec aprobado, referencia en CLAUDE.md §6, docs/structure.md | hecha |
 | 2 | core: `BitFlip` + tests | hecha |
 | 3 | ej1: conjuntos ruidosos de validación y test, y referencias + tests | hecha |
-| 4 | ej1: config + `dae.py` + smoke test | pendiente |
+| 4 | ej1: config + `dae.py` + smoke test | hecha |
 | 5 | ej1: `graficos_dae.py` | pendiente |
 | 6 | Corrida completa, figuras y resultados en este spec | pendiente |
 
@@ -194,6 +195,17 @@ En `ej1/`:
 - **Vecino más cercano:** en un empate de distancia gana la letra de menor índice. El vecino más
   cercano no es infalible ni con poco ruido: «l» y «|» están a solo 2 píxeles, así que un único
   píxel invertido puede dejar la entrada a la misma distancia de las dos.
+- **Config del 1b:** `config_dae.json` copia la config final del 1a, salvo `decaimiento`
+  (era null y no se usa), y le agrega `paciencia` y `ruido`. `ruido` es un float (p fijo) o un
+  par `[p_min, p_max]` (mixto). Un test verifica que la base coincide con
+  `resultados/ej1/final/config.json`.
+- **Salidas de `dae.py`:** `experimento_A_latente.csv` y `experimento_B_ruido.csv` (una fila
+  por valor × semilla, con columnas `val_<medida>_<p>` para cada nivel);
+  `referencias_validacion.csv` (nada, vecino y AE del 1a en validación, para la figura 1);
+  `elecciones.json`; y `final/` con `config.json`, pesos e historia por semilla, y
+  `test.csv` (modelo, semilla, nivel y medidas, para el DAE y las tres referencias). La
+  config final se reentrena con las 5 semillas. Es determinístico: da los mismos pesos que la
+  corrida de B, y el smoke test lo verifica.
 - **Sin currículum:** no se prueba un p que suba o baje con las épocas. Habría que barrer
   también ese schedule, y el p sorteado por muestra (`mixto`) ya pone todos los niveles en
   cada lote.

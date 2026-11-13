@@ -1,0 +1,47 @@
+{
+  "semillas": [0, 1, 2, 3, 4],
+  "niveles": [0.0, 0.05, 0.1, 0.2, 0.3],
+  "copias": 50,
+  "semilla_validacion": 1000,
+  "semilla_test": 2000,
+  "base": {
+    "ocultas": [60, 40, 20],
+    "latente": 2,
+    "activacion_ocultas": "tanh",
+    "activacion_latente": "identity",
+    "activacion_salida": "sigmoid",
+    "inicializacion": "he",
+    "optimizador": "adam",
+    "lr": 0.01,
+    "batch_size": 32,
+    "perdida": "binary_crossentropy",
+    "l2": 0.0,
+    "max_epocas": 10000,
+    "paciencia": 500,
+    "ruido": 0.1
+  },
+  "experimentos": [
+    {
+      "id": "A",
+      "nombre": "latente",
+      "valores": [
+        {"etiqueta": "2", "cambios": {"latente": 2}},
+        {"etiqueta": "4", "cambios": {"latente": 4}},
+        {"etiqueta": "8", "cambios": {"latente": 8}},
+        {"etiqueta": "16", "cambios": {"latente": 16}}
+      ]
+    },
+    {
+      "id": "B",
+      "nombre": "ruido",
+      "valores": [
+        {"etiqueta": "0", "cambios": {"ruido": 0.0}},
+        {"etiqueta": "0.05", "cambios": {"ruido": 0.05}},
+        {"etiqueta": "0.1", "cambios": {"ruido": 0.1}},
+        {"etiqueta": "0.2", "cambios": {"ruido": 0.2}},
+        {"etiqueta": "0.3", "cambios": {"ruido": 0.3}},
+        {"etiqueta": "mixto", "cambios": {"ruido": [0.0, 0.3]}}
+      ]
+    }
+  ]
+}
