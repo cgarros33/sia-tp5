@@ -179,7 +179,7 @@ En `ej1/`:
 | 3 | ej1: conjuntos ruidosos de validación y test, y referencias + tests | hecha |
 | 4 | ej1: config + `dae.py` + smoke test | hecha |
 | 5 | ej1: `graficos_dae.py` | hecha |
-| 6 | Corrida completa, figuras y resultados en este spec | pendiente |
+| 6 | Corrida completa, figuras y resultados en este spec | hecha |
 
 ## Supuestos
 
@@ -222,4 +222,87 @@ En `ej1/`:
 
 ## Resultados
 
-Pendiente.
+Corrida completa: 50 corridas de DAE (20 en A y 30 en B), más el reentrenamiento final con 5
+semillas. Fueron unos 52 minutos de entrenamiento en secuencial, sin ninguna corrida divergida.
+Todo sale de `resultados/ej1b/`. Píxeles mal: media ± desvío sobre semillas. "Promedio" es el
+promedio sobre los p de validación > 0, que es el criterio de elección.
+
+### Experimento A: dimensión del latente (p_train = 0,1, validación)
+
+| Latente | Promedio | Recuperadas | p = 0 | 0,05 | 0,1 | 0,2 | 0,3 | Épocas |
+|---|---|---|---|---|---|---|---|---|
+| 2 | 3,78 ± 0,24 | 59,6 ± 6,7 % | 0,40 | 0,56 | 1,06 | 4,29 | 9,22 | 2516 ± 797 |
+| 4 | 3,24 ± 0,08 | 67,6 ± 1,0 % | 0,01 | 0,13 | 0,62 | 3,64 | 8,56 | 1807 ± 120 |
+| **8** | **3,06 ± 0,13** | **68,7 ± 0,8 %** | 0,03 | 0,13 | 0,53 | 3,33 | 8,26 | 1556 ± 241 |
+| 16 | 3,07 ± 0,18 | 68,1 ± 1,8 % | 0,03 | 0,13 | 0,55 | 3,33 | 8,25 | 1476 ± 226 |
+
+Gana el latente 8. La hipótesis del spec (un latente chico filtra mejor el ruido) **no se
+cumple**: el latente 2 es el peor en todos los niveles. Con 2 dimensiones la red ni siquiera
+reconstruye bien las letras limpias (0,40 píxeles mal con p = 0), porque el corte mira la
+validación ruidosa y no las limpias. A partir del latente 4 el resultado se satura: 8 y 16
+empatan dentro del desvío (3,06 contra 3,07), y 8 gana por la regla.
+
+### Experimento B: ruido de entrenamiento (latente 8, validación)
+
+| p_train | Promedio | Recuperadas | p = 0 | 0,05 | 0,1 | 0,2 | 0,3 | Épocas |
+|---|---|---|---|---|---|---|---|---|
+| 0 | 6,48 ± 0,42 | 34,7 ± 0,9 % | 0,00 | 1,78 | 4,06 | 8,26 | 11,82 | 10.000 (no corta) |
+| 0,05 | 3,55 ± 0,13 | 63,9 ± 0,8 % | 0,00 | 0,16 | 0,86 | 4,20 | 8,98 | 1355 ± 351 |
+| 0,1 | 3,06 ± 0,13 | 68,7 ± 0,8 % | 0,03 | 0,13 | 0,53 | 3,33 | 8,26 | 1556 ± 241 |
+| **0,2** | **2,72 ± 0,10** | **66,0 ± 3,4 %** | 0,28 | 0,38 | 0,71 | 2,66 | 7,12 | 2349 ± 730 |
+| 0,3 | 4,15 ± 0,06 | 28,7 ± 2,1 % | 2,29 | 2,45 | 2,74 | 4,25 | 7,15 | 2254 ± 248 |
+| mixto | 2,88 ± 0,08 | 65,4 ± 1,7 % | 0,07 | 0,21 | 0,65 | 3,14 | 7,52 | 2088 ± 273 |
+
+Gana p_train = 0,2.
+
+- **Cada p_train rinde mejor cerca de su propio nivel** (la diagonal de la figura 2). Entrenar
+  con poco ruido deja a la red indefensa con mucho ruido, y entrenar con mucho ruido la vuelve
+  menos precisa con poco: con p_train = 0,3 hay 2,29 píxeles mal sobre letras limpias.
+- **p_train = 0 (sin ruido) no limpia nada:** con p = 0,1 deja 4,06 píxeles mal, más que la
+  entrada (3,5). Además, nunca corta: su validación son las letras limpias, que sigue
+  mejorando hasta las 10.000 épocas.
+- **Mixto:** queda segundo (2,88 contra 2,72) y es el más parejo entre niveles. Le gana a 0,2
+  con p ≤ 0,1 (0,07 / 0,21 / 0,65 contra 0,28 / 0,38 / 0,71) y pierde con p ≥ 0,2. Que gane 0,2
+  depende del criterio: al promediar píxeles mal, los niveles altos (que tienen muchos más
+  errores) pesan más en el promedio y favorecen al p_train alto. Si importaran más los niveles
+  bajos, mixto sería la mejor opción.
+
+### Config final
+
+Encoder 35 → 60 → 40 → 20 → **8** y decoder espejado; tanh en las ocultas, latente lineal,
+salida sigmoidea, He, Adam con lr 0,01, lote completo, BCE y sin L2. Se entrena con bit-flip de
+**p = 0,2** y se corta con paciencia 500. Corta entre las épocas 1656 y 3467
+(`resultados/ej1b/final/config.json`).
+
+### Resultado final en test
+
+Píxeles mal por letra · % de letras recuperadas (≤ 1 píxel mal). DAE y AE del 1a: media ±
+desvío sobre 5 semillas. Las otras dos referencias son determinísticas.
+
+| Modelo | p = 0 | 0,05 | 0,1 | 0,2 | 0,3 |
+|---|---|---|---|---|---|
+| No hacer nada | 0,00 · 100 % | 1,74 · 48 % | 3,50 · 11 % | 7,14 · 0 % | 10,58 · 0 % |
+| AE del 1a | 0,10 ± 0,03 · 100 % | 4,62 ± 0,48 · 46 % | 7,50 ± 0,41 · 24 % | 11,14 ± 0,51 · 9 % | 13,28 ± 0,25 · 5 % |
+| **DAE** | 0,28 ± 0,16 · 92 % | **0,36 ± 0,11 · 91 %** | **0,72 ± 0,11 · 85 %** | **2,99 ± 0,11 · 59 %** | **7,40 ± 0,08 · 28 %** |
+| Vecino más cercano (techo) | 0,00 · 100 % | 0,01 · 100 % | 0,12 · 98 % | 1,43 · 85 % | 5,88 · 51 % |
+
+El test confirma lo que mostraba la validación: no hay sobreajuste a los conjuntos ruidosos de
+validación.
+
+### Observaciones
+
+- **El AE del 1a no sirve para limpiar:** con cualquier ruido da peor que devolver la entrada.
+  Su latente de 2 dimensiones lleva una letra con 2 o 3 píxeles cambiados a otra letra entera.
+- **El DAE limpia:** con p = 0,1, de 3,5 píxeles mal en la entrada pasa a 0,72, y recupera el
+  85 % de las letras contra el 11 % de la entrada. Con p = 0,3 sigue mejorando la entrada (7,40
+  contra 10,58), pero recupera pocas letras.
+- **Queda lejos del techo** con ruido alto (con p = 0,2, 2,99 píxeles mal contra 1,43 del vecino
+  más cercano): la red no aprende a "elegir una letra" tan bien como una búsqueda exhaustiva
+  sobre las 32.
+- **Costo con letras limpias:** el DAE final recupera solo el 92 ± 5 % de las letras sin ruido,
+  contra el 100 % del AE del 1a. Las que falla varían con la semilla: «`», «r», «|», «o» y
+  otras, con 2 a 4 píxeles mal. Entrenar para limpiar ruido le resta precisión para copiar.
+- **«l» y «|»** (a 2 píxeles): en la figura 4, el DAE de la semilla 0 devuelve «l» cuando le
+  llega una «|» con p ≤ 0,2. En el latente 2 (figura 5), sus códigos casi coinciden.
+- **Latente 2 (figura 5):** las letras ruidosas quedan, en su mayoría, cerca del código de su
+  letra limpia. Las que saltan lejos caen cerca de otra letra, y esos saltos son los errores.

@@ -1,0 +1,311 @@
+{
+  "config_dae": {
+    "semillas": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "niveles": [
+      0.0,
+      0.05,
+      0.1,
+      0.2,
+      0.3
+    ],
+    "copias": 50,
+    "semilla_validacion": 1000,
+    "semilla_test": 2000,
+    "base": {
+      "ocultas": [
+        60,
+        40,
+        20
+      ],
+      "latente": 2,
+      "activacion_ocultas": "tanh",
+      "activacion_latente": "identity",
+      "activacion_salida": "sigmoid",
+      "inicializacion": "he",
+      "optimizador": "adam",
+      "lr": 0.01,
+      "batch_size": 32,
+      "perdida": "binary_crossentropy",
+      "l2": 0.0,
+      "max_epocas": 10000,
+      "paciencia": 500,
+      "ruido": 0.1
+    },
+    "experimentos": [
+      {
+        "id": "A",
+        "nombre": "latente",
+        "guardar_pesos": [
+          "2"
+        ],
+        "valores": [
+          {
+            "etiqueta": "2",
+            "cambios": {
+              "latente": 2
+            }
+          },
+          {
+            "etiqueta": "4",
+            "cambios": {
+              "latente": 4
+            }
+          },
+          {
+            "etiqueta": "8",
+            "cambios": {
+              "latente": 8
+            }
+          },
+          {
+            "etiqueta": "16",
+            "cambios": {
+              "latente": 16
+            }
+          }
+        ]
+      },
+      {
+        "id": "B",
+        "nombre": "ruido",
+        "valores": [
+          {
+            "etiqueta": "0",
+            "cambios": {
+              "ruido": 0.0
+            }
+          },
+          {
+            "etiqueta": "0.05",
+            "cambios": {
+              "ruido": 0.05
+            }
+          },
+          {
+            "etiqueta": "0.1",
+            "cambios": {
+              "ruido": 0.1
+            }
+          },
+          {
+            "etiqueta": "0.2",
+            "cambios": {
+              "ruido": 0.2
+            }
+          },
+          {
+            "etiqueta": "0.3",
+            "cambios": {
+              "ruido": 0.3
+            }
+          },
+          {
+            "etiqueta": "mixto",
+            "cambios": {
+              "ruido": [
+                0.0,
+                0.3
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "experimentos": [
+    {
+      "id": "A",
+      "nombre": "latente",
+      "valor_anterior": "2",
+      "ganador": "8",
+      "criterio": "pixeles_mal",
+      "resumen": {
+        "2": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.7808750000000004,
+          "pixeles_mal_desvio": 0.2377756315869281,
+          "recuperadas_media": 0.59584375,
+          "recuperadas_desvio": 0.06719100644919858,
+          "epocas_media": 2516.4,
+          "epocas_desvio": 796.5882248690348,
+          "segundos_media": 92.0502487501988,
+          "divergidas": 0
+        },
+        "4": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.2362187500000004,
+          "pixeles_mal_desvio": 0.08224179824703653,
+          "recuperadas_media": 0.67628125,
+          "recuperadas_desvio": 0.010405241129774477,
+          "epocas_media": 1807.2,
+          "epocas_desvio": 120.42300444682485,
+          "segundos_media": 66.67820578859974,
+          "divergidas": 0
+        },
+        "8": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.0618125000000003,
+          "pixeles_mal_desvio": 0.13327166033789306,
+          "recuperadas_media": 0.6869374999999999,
+          "recuperadas_desvio": 0.00816441760591353,
+          "epocas_media": 1556.0,
+          "epocas_desvio": 241.03422993425644,
+          "segundos_media": 57.62373208420176,
+          "divergidas": 0
+        },
+        "16": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.06475,
+          "pixeles_mal_desvio": 0.1756308245253021,
+          "recuperadas_media": 0.6809062499999999,
+          "recuperadas_desvio": 0.018217503709516622,
+          "epocas_media": 1476.2,
+          "epocas_desvio": 226.08449747826586,
+          "segundos_media": 36.853785164597504,
+          "divergidas": 0
+        }
+      },
+      "config": {
+        "ocultas": [
+          60,
+          40,
+          20
+        ],
+        "latente": 8,
+        "activacion_ocultas": "tanh",
+        "activacion_latente": "identity",
+        "activacion_salida": "sigmoid",
+        "inicializacion": "he",
+        "optimizador": "adam",
+        "lr": 0.01,
+        "batch_size": 32,
+        "perdida": "binary_crossentropy",
+        "l2": 0.0,
+        "max_epocas": 10000,
+        "paciencia": 500,
+        "ruido": 0.1
+      }
+    },
+    {
+      "id": "B",
+      "nombre": "ruido",
+      "valor_anterior": "0.1",
+      "ganador": "0.2",
+      "criterio": "pixeles_mal",
+      "resumen": {
+        "0": {
+          "corridas": 5,
+          "pixeles_mal_media": 6.48209375,
+          "pixeles_mal_desvio": 0.4221328436586194,
+          "recuperadas_media": 0.34687500000000004,
+          "recuperadas_desvio": 0.009111532227416536,
+          "epocas_media": 10000.0,
+          "epocas_desvio": 0.0,
+          "segundos_media": 117.89569534080074,
+          "divergidas": 0
+        },
+        "0.05": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.547625,
+          "pixeles_mal_desvio": 0.12842131322878714,
+          "recuperadas_media": 0.63871875,
+          "recuperadas_desvio": 0.007827641576889557,
+          "epocas_media": 1355.4,
+          "epocas_desvio": 350.9249207451645,
+          "segundos_media": 16.18291822300089,
+          "divergidas": 0
+        },
+        "0.1": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.0618125000000003,
+          "pixeles_mal_desvio": 0.13327166033789306,
+          "recuperadas_media": 0.6869374999999999,
+          "recuperadas_desvio": 0.00816441760591353,
+          "epocas_media": 1556.0,
+          "epocas_desvio": 241.03422993425644,
+          "segundos_media": 18.77719849019777,
+          "divergidas": 0
+        },
+        "0.2": {
+          "corridas": 5,
+          "pixeles_mal_media": 2.71859375,
+          "pixeles_mal_desvio": 0.09803171571056102,
+          "recuperadas_media": 0.65965625,
+          "recuperadas_desvio": 0.034179200889393246,
+          "epocas_media": 2349.0,
+          "epocas_desvio": 729.6968548650871,
+          "segundos_media": 41.657867150999664,
+          "divergidas": 0
+        },
+        "0.3": {
+          "corridas": 5,
+          "pixeles_mal_media": 4.146187499999999,
+          "pixeles_mal_desvio": 0.06260894801139666,
+          "recuperadas_media": 0.28650000000000003,
+          "recuperadas_desvio": 0.020738207304092125,
+          "epocas_media": 2253.6,
+          "epocas_desvio": 248.31492101764647,
+          "segundos_media": 27.978282931199647,
+          "divergidas": 0
+        },
+        "mixto": {
+          "corridas": 5,
+          "pixeles_mal_media": 2.8774375,
+          "pixeles_mal_desvio": 0.08215582802287962,
+          "recuperadas_media": 0.6538125,
+          "recuperadas_desvio": 0.01716283741929781,
+          "epocas_media": 2088.0,
+          "epocas_desvio": 272.59035199360966,
+          "segundos_media": 151.97962799460075,
+          "divergidas": 0
+        }
+      },
+      "config": {
+        "ocultas": [
+          60,
+          40,
+          20
+        ],
+        "latente": 8,
+        "activacion_ocultas": "tanh",
+        "activacion_latente": "identity",
+        "activacion_salida": "sigmoid",
+        "inicializacion": "he",
+        "optimizador": "adam",
+        "lr": 0.01,
+        "batch_size": 32,
+        "perdida": "binary_crossentropy",
+        "l2": 0.0,
+        "max_epocas": 10000,
+        "paciencia": 500,
+        "ruido": 0.2
+      }
+    }
+  ],
+  "config_final": {
+    "ocultas": [
+      60,
+      40,
+      20
+    ],
+    "latente": 8,
+    "activacion_ocultas": "tanh",
+    "activacion_latente": "identity",
+    "activacion_salida": "sigmoid",
+    "inicializacion": "he",
+    "optimizador": "adam",
+    "lr": 0.01,
+    "batch_size": 32,
+    "perdida": "binary_crossentropy",
+    "l2": 0.0,
+    "max_epocas": 10000,
+    "paciencia": 500,
+    "ruido": 0.2
+  }
+}
