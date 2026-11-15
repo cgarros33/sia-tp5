@@ -25,10 +25,19 @@ ej1/                   Exercise 1a: basic autoencoder on font.h (spec: docs/cont
   config_dae.json      1b: base config, noise levels, noisy val/test seeds, experiment grids
   dae.py               1b experiments; writes only to resultados/ej1b/
   graficos_dae.py      1b figures; reads only from resultados/ej1b/, writes resultados/ej1b/figuras/
+ej2/                   Exercise 2: VAE on four datasets (spec: docs/context/ej2-vae.md)
+  datos.py             Loads processed .npz; splits and the flag scaler (train only)
+  banderas.py          Tolerant flags CSV parser + render_flag (figures only)
+  config.json          Sweep grid and per-dataset base configuration
+  modelos.py           Image VAE, tabular VAE and deterministic AE builders
+  vae_exp.py           Compact sweep and final training; writes only to resultados/ej2/
+  graficos.py          Figures; reads only from resultados/ej2/, writes resultados/ej2/<dataset>/figuras/
 tests/                 pytest suite, one file per core module (test_ej1_*.py for ej1/)
-data/                  Datasets (font.h, flags_tricolor.csv)
+data/                  Datasets (font.h, flags_tricolor.csv, raw images and chineseMNIST.csv)
+data/procesadas/       Processed .npz, low-resolution PNGs and F1 manifests (committed)
 resultados/ej1/        Sweep output: one CSV per step, elecciones.json, final/ (weights, history)
 resultados/ej1b/       1b output: one CSV per experiment, elecciones.json, final/ (weights, test.csv)
+resultados/ej2/        VAE output: dedup manifests, sweep CSVs, final/ and latent_2/16 (weights, figures)
 utils/                 Standalone data scripts (excluded from ruff)
 docs/context/          Assignment, course notes and exercise specs (source of truth)
 check-cicd.py          Local CI: creates .venv, installs requirements, runs all checks
@@ -69,12 +78,14 @@ encoder = Network([n_features, 16, 2 * 2], output_activation="identity", rng=rng
 decoder = Network([2, 16, n_features], output_activation="sigmoid", rng=rng)
 vae = VariationalAutoencoder(encoder, decoder, kl_weight=1.0)
 
-vae.fit(X, optimizer=Adam(), loss=MSE(), epochs=5000)  # train_loss is L + kl_weight * KL
+vae.fit(X, optimizer=Adam(), loss=MSE(), epochs=5000)  # train_loss is L + kl_weight * mean KL
 mu = vae.encode(X)  # mean of q(z/x), no sampling
 new = vae.sample(10)  # z ~ N(0, I) through the decoder
 ```
 
 `predict` is stochastic (samples z); the noise-free reconstruction is `decode(encode(X))`.
+The KL term is averaged over samples (not over samples and features), the standard β-VAE
+objective.
 
 ## Commands
 
@@ -85,3 +96,7 @@ new = vae.sample(10)  # z ~ N(0, I) through the decoder
 - Exercise 1a figures: `python3 -m ej1.graficos`
 - Exercise 1b experiments: `python3 -m ej1.dae` (resumable, like the 1a sweep)
 - Exercise 1b figures: `python3 -m ej1.graficos_dae`
+- Exercise 2 data: `python3 utils/preparar_ej2.py --todo` (dedup first: `--dedup-f1`)
+- Exercise 2 sweep: `python3 -m ej2.vae_exp --dataset nba --fase barrido`
+- Exercise 2 final models: `python3 -m ej2.vae_exp --dataset nba --fase final`
+- Exercise 2 figures: `python3 -m ej2.graficos`

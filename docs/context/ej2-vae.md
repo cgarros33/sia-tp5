@@ -121,8 +121,13 @@ Reglas generales:
 2. Calcular SHA-256 de cada uno y de todos los `data/headshots/<temporada>/*.png` del nivel
    superior.
 3. Para cada `by_ref`, buscar un top-level con el mismo hash **en la misma temporada**. Si
-   alguno no tiene duplicado exacto, **abortar sin borrar nada** y listar los archivos
-   problemáticos.
+   alguno no tiene duplicado exacto, abortar y listar los archivos problemáticos. La
+   excepción comprobada en los datos reales: `2023/by_ref/LOGSAR1.png` es único y
+   `2024/by_ref/LOGSAR1.png` duplica a `2023/SAR.png` (otra temporada). Con
+   `--permitir-huerfanos` se copian antes de borrar a
+   `data/procesadas/f1_byref_sin_par/` y se registran en
+   `resultados/ej2/dedup_byref_sin_par.csv`; el dataset principal sigue teniendo 158
+   imágenes. Sin ese flag, el script aborta sin borrar nada.
 4. Escribir `resultados/ej2/dedup_headshots.csv` con columnas
    `ruta_borrada,sha256,ruta_conservada` (175 filas).
 5. Borrar cada directorio `data/headshots/<temporada>/by_ref/` completo.
@@ -243,7 +248,7 @@ Parseo tolerante (idéntico al de `utils/generar_banderas.py`):
 ```python
 nombre, *resto = fila
 numeros = list(map(int, ",".join(resto[:-3]).split(",")))
-colores = [numeros[i:i + 3] for i in range(0, len(numeros), 3)]
+colores = [numeros[i : i + 3] for i in range(0, len(numeros), 3)]
 rotada, proporcion, aspecto = int(resto[-3]), float(resto[-2]), float(resto[-1])
 ```
 
@@ -685,3 +690,112 @@ latente 2/16, y 5 semillas solo en `final`.
    épocas fijas porque asumía un dataset de 16–20 imágenes; con 158 confirmadas, la
    validación alcanza para cortar por `val_loss`.
 8. Se agrega `pillow==11.3.0` a `requirements.txt` para la preparación de imágenes.
+
+## 13. Estado y resultados
+
+Ejecutado completo el 2026-11-15. Todos los pasos de §10 quedaron corridos y verificados; los
+cuatro barridos, los cinco modelos por dataset y las 29 figuras existen en `resultados/ej2/`.
+
+### 13.1 Configuración elegida por validación
+
+| dataset | latente | capacidad | β | lr | pérdida | pasos |
+|---|---:|---|---:|---:|---|---:|
+| `nba` | 2 | 64–32 | 1.0 | 0.003 | MSE | 5 |
+| `f1` | 2 | 64–32 | 0.1 | 0.0003 | BCE | 5 |
+| `chino` | 2 | 64–32 | 1.0 | 0.0003 | BCE | 4 (una sola pérdida) |
+| `banderas` | 2 | 64–32 | 0.1 | 0.003 | MSE | 4 (una sola pérdida) |
+
+Los cuatro datasets eligieron el latente 2 y la capacidad más chica porque, a menos de un
+desvío del mejor ELBO, el criterio de simplicidad prefiere el modelo más chico. Por eso
+`latente_2/` reutiliza la corrida de `final/` y solo se entrena aparte `latente_16/`.
+
+### 13.2 Métricas de test (media ± desvío sobre semillas)
+
+MSE de reconstrucción determinística; para banderas está en el espacio escalado.
+
+| dataset | final / latente 2 | latente 16 | AE latente 2 | AE latente 16 |
+|---|---:|---:|---:|---:|
+| `nba` | 0.0498 ± 0.0002 | 0.0505 ± 0.0011 | 0.0305 ± 0.0032 | 0.0135 ± 0.0004 |
+| `f1` | 0.0472 ± 0.0001 | 0.0480 ± 0.0003 | 0.0250 ± 0.0004 | 0.0196 ± 0.0006 |
+| `chino` | 0.0010 ± 0.0000 | 0.0010 ± 0.0000 | 0.0008 ± 0.0000 | 0.0005 ± 0.0000 |
+| `banderas` | 0.1056 ± 0.0020 | 0.1123 ± 0.0024 | 0.0665 ± 0.0108 | 0.0004 ± 0.0001 |
+
+Unidades activas medias: 0 en los tres datasets de imagen y 0.2 en banderas. `nn_dist` de las
+muestras de `N(0, I)` es chico en las imágenes (0.013–0.016 en NBA/F1) y grande en los AE
+(0.11–0.23), señal de que el VAE genera la cara media.
+
+### 13.3 Hallazgo: colapso del posterior en las imágenes
+
+Con la normalización de §2 (reconstrucción promediada sobre muestras y píxeles + β · KL
+promedio por muestra) el término KL domina por un factor igual a la cantidad de features
+(400–480 en NBA/F1, 256 en chino). Resultado medido:
+
+- Los tres datasets de imagen terminaron con **0 unidades activas** en test.
+- La reconstrucción del VAE iguala a la imagen media de train: NBA 0.0498 vs 0.0496, F1 0.0472
+  vs 0.0470, chino 0.0010 vs 0.0010.
+- El paso 3 (β) disparó la regla de excepción en NBA, F1 y chino: ningún β de
+  `{0.1, 1, 5}` logró `activas ≥ k/2` y `KL > 0.01`; se eligió el de más unidades activas
+  (0) y, entre esos, la menor reconstrucción.
+- Banderas (d = 12) no colapsa del todo: 2/2 unidades activas en el barrido y KL 2.12 / 1.11 /
+  0.66 para β 0.1 / 1 / 5; en el final de 1000 épocas queda 1 semilla con 1 unidad activa.
+- Los AE determinísticos sí usan el latente (0.0135 en NBA con k = 16), así que la diferencia
+  es del objetivo β-VAE, no del motor ni de los datos.
+
+Durante el barrido se detectó y corrigió un error del runner: `beta` no se pasaba a
+`VariationalAutoencoder` (`kl_weight` quedaba en 1.0), por lo que el paso 3 era un no-op. Ahora
+`construir_vae_imagen`/`construir_vae_tabular` reciben `beta`, un test verifica
+`kl_weight == beta`, y los cuatro barridos se repitieron con `--forzar`.
+
+No se cambia la normalización: es una decisión del equipo (§ Decisiones). Si se quisiera
+evitar el colapso habría que sumar la reconstrucción sobre píxeles o escalar β por `d`, y
+repetir barrido y finales.
+
+### 13.4 Figuras
+
+`python3 -m ej2.graficos` regenera 29 archivos (7 por dataset de imagen, 8 en banderas) en
+`resultados/ej2/<dataset>/figuras/`:
+
+| archivo | contenido |
+|---|---|
+| `01_dataset.png` | muestras del dataset (banderas renderizadas) |
+| `02_reconstruccion.png` | original vs reconstrucción en train y test |
+| `03_latente_2.png` | μ del test y grilla decodificada |
+| `04_latente_16_pca.png` | PCA de μ a 2D y grilla decodificada |
+| `05_generacion.png` | muestras de `N(0, I)` y distancias a train |
+| `06_curvas.png` | pérdidas, KL y unidades activas por época |
+| `07_latente_2_vs_16.png` | reconstrucciones y muestras lado a lado |
+| `08_banderas_decodificadas.png` | banderas de test, reconstruidas y generadas |
+
+### 13.5 Reproducción y tiempos medidos
+
+```bash
+python3 utils/preparar_ej2.py --dedup-f1 --permitir-huerfanos
+python3 utils/preparar_ej2.py --todo
+python3 -m ej2.vae_exp --dataset nba --fase barrido --trabajadores 5
+python3 -m ej2.vae_exp --dataset f1 --fase barrido --trabajadores 5
+python3 -m ej2.vae_exp --dataset chino --fase barrido --trabajadores 5
+python3 -m ej2.vae_exp --dataset banderas --fase barrido --trabajadores 5
+python3 -m ej2.vae_exp --dataset nba --fase final --trabajadores 5
+python3 -m ej2.vae_exp --dataset f1 --fase final --trabajadores 5
+python3 -m ej2.vae_exp --dataset chino --fase final --trabajadores 5
+python3 -m ej2.vae_exp --dataset banderas --fase final --trabajadores 5
+python3 -m ej2.graficos
+python3 check-cicd.py
+```
+
+Barridos: NBA 1m43s, F1 1m27s, chino 6m29s, banderas 3s. Finales: NBA 21s, F1 27s, chino
+2m16s, banderas 3s. Figuras: 5s. CI completo: 26s. El barrido es reanudable: al repetir NBA
+releyó 20/15/15/15/10 corridas y solo reescribió `elecciones.json`.
+
+### 13.6 Criterios de aceptación
+
+- `find data/headshots -type d -name by_ref` no devuelve nada; quedan 172 PNG top-level y el
+  dataset F1 tiene 158 imágenes y 29 códigos.
+- NBA 347, chino 2400 (`160 × 15`), banderas `(67, 12)`; conteos por split 277/35/35,
+  126/16/16, 1920/240/240 y 54/7/6.
+- Los cuatro barridos terminaron sin NaN/Inf y `elecciones.json` tiene una decisión por paso.
+- Los 20 modelos finales se recargan desde `pesos_semilla_<s>.npz` y reproducen el
+  `recon_mse` de `test.csv` (verificado para la semilla 0 en las 20 carpetas).
+- `python3 check-cicd.py` pasa: 53 archivos formateados y toda la suite en verde.
+- `ej1/`, `ej1b/`, `resultados/ej1/`, `resultados/ej1b/` y `data/font.h` no tienen cambios.
+- `python3 -m ej2.graficos` regenera las 29 figuras sin entrenar.
