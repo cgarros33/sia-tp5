@@ -87,7 +87,9 @@ Context files will be created later and referenced explicitly in this document. 
 Context files:
 - [docs/context/ej1-autoencoder.md](docs/context/ej1-autoencoder.md): Exercise 1a (basic autoencoder on font.h): team decisions, sequential sweep, assumptions, phases and results.
 - [docs/context/ej1b-denoising.md](docs/context/ej1b-denoising.md): Exercise 1b (denoising AE on font.h): bit-flip noise (fixed and mixed levels), latent-dim study, noisy val/test sets, phases and results.
-- [docs/context/ej2-vae.md](docs/context/ej2-vae.md): Exercise 2 (VAE on four datasets): data preparation and F1 dedup, β-VAE change, compact sweep, latent 2/16 artifacts, figures, phases and results.
+- [docs/context/ej2-vae.md](docs/context/ej2-vae.md): Exercise 2 (VAE on four datasets): data preparation and F1 dedup, β-VAE change, compact sweep, latent 2/16 artifacts, figures, phases and results. §14 supersedes the original normalization and resolutions.
+- [docs/context/ej2-vae-fix.md](docs/context/ej2-vae-fix.md): Exercise 2 correction: new resolutions, Chinese black-on-white preprocessing, KL normalization fix, anti-collapse hyperparameters, retry ladder and retraining phases.
+- [docs/context/ej2-kl-fix.md](docs/context/ej2-kl-fix.md): Exercise 2 theory: why the posterior collapses, the corrected β-VAE normalization, KL warm-up, free bits and active-unit selection.
 
 Workflow: short plan (files + tests) → wait for OK → tests first → code → tests and lint green → update the spec status → show changes, propose a commit message, wait for permission (section 0).
 

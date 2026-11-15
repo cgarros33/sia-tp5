@@ -799,3 +799,74 @@ releyó 20/15/15/15/10 corridas y solo reescribió `elecciones.json`.
 - `python3 check-cicd.py` pasa: 53 archivos formateados y toda la suite en verde.
 - `ej1/`, `ej1b/`, `resultados/ej1/`, `resultados/ej1b/` y `data/font.h` no tienen cambios.
 - `python3 -m ej2.graficos` regenera las 29 figuras sin entrenar.
+
+## 14. Correcciones (2026-11-15)
+
+La primera corrida dejó los tres VAE de imagen colapsados: 0 unidades activas y reconstrucción
+igual a la imagen media de train. La causa es la normalización del KL de §2. Este apartado
+reemplaza §1.2–§1.4, §2, §5–§7, §8 y §12.6; el historial de arriba queda como registro de lo
+que se hizo y este es el estado vigente.
+
+Documentos nuevos:
+
+- [ej2-vae-fix.md](ej2-vae-fix.md): plan de corrección en cuatro fases (especificación,
+  conversiones, implementación, reentrenamiento), hiperparámetros y criterios de aceptación.
+- [ej2-kl-fix.md](ej2-kl-fix.md): desarrollo teórico de por qué colapsa el VAE, la
+  normalización correcta, warm-up, free bits y unidades activas.
+
+### 14.1 Diagnóstico
+
+El motor promedia la reconstrucción sobre muestras **y** features (`n·d`), pero el VAE sumaba
+el KL sobre el latente y lo promediaba solo sobre muestras. El gradiente del KL queda
+multiplicado por `d` (256–480) respecto del de reconstrucción, así que el encoder aprende
+`μ = 0`, `σ = 1` y el decoder emite la imagen media. Evidencia: NBA `KL=9e-05`,
+`recon=0.0498` vs baseline 0.0496; F1 `KL=0.0014`, `0.0472` vs `0.0470`; chino `KL≈0`,
+`0.0010` vs `0.0010`. Los AE determinísticos sí usan el latente (NBA AE16 `0.0135`), así que
+el problema es el objetivo β-VAE, no los datos ni el motor.
+
+### 14.2 Normalización corregida
+
+```text
+J = L_recon_promedio + β · KL_promedio / d
+  = (1/d) · [ Σ_pixels L_recon + β · KL_promedio ]
+```
+
+Es la forma estándar de β-VAE con reconstrucción sumada sobre píxeles. El `1/d` es un factor
+global: no cambia el minimizador y hace que `β` no dependa de la resolución. `β = 1` recupera
+el ELBO sin ponderar. La métrica `kl_divergence` sigue devolviendo la KL promedio real, sin
+dividir por `d`.
+
+### 14.3 Datos y resoluciones
+
+| dataset | antes | ahora | vector `d` | `.npz` |
+|---|---|---|---:|---|
+| F1 | 20×20 | **32×32** | 1024 | `f1_32x32.npz` |
+| NBA | 20×24 | **30×36** (ancho×alto) | 1080 | `nba_30x36.npz` |
+| Chino | 16×16, 2400 | **32×32, 20 por clase (300)** | 1024 | `chino_32x32.npz` |
+| Banderas | 12 | sin cambio | 12 | `flags.npz` |
+
+- Chino se downsamplea 64×64 → 32×32 con promedio de bloques 2×2, se normaliza por el máximo
+  de cada imagen y se invierte (`1 − x`): **fondo blanco y trazo negro**. Split 16/2/2 por
+  clase = 240/30/30.
+- Los procesados vuelven a `data/procesadas/`, que es local y está en `.gitignore`: los `.npz`
+  y PNG procesados no se commitean nunca.
+- `data/banderas/procesadas/` (la carpeta movida) queda fuera de uso.
+
+### 14.4 Hiperparámetros y antídotos contra el colapso
+
+Barrido: latente `{4, 8, 16}`, capacidad `{128-64, 256-128}`, β `{0.01, 0.1, 1, 5}`,
+lr `{3e-4, 1e-3, 3e-3}`, MSE + identidad, 1000 épocas, paciencia 200 sobre `val_recon`.
+Warm-up del KL lineal en el 20 % de las épocas y filtro `activas ≥ k/2` y `KL > 0.01` en
+**todos** los pasos del barrido, no solo en β. Si aun así colapsa, se sube por una escalera de
+cuatro niveles que agrega free bits (`0.05`, `0.10`, `0.20`), warm-ups más largos y más
+capacidad; el nivel usado se guarda en `elecciones.json`. El detalle está en
+[ej2-vae-fix.md](ej2-vae-fix.md) §3.4.
+
+### 14.5 Figuras
+
+Se agrega `00_resumen.png` como primera figura y la que se usa en la presentación: 8 columnas
+por tres filas (original / reconstrucción / muestra de `N(0, I)`). NBA usa LeBron, Dončić,
+Jokić y Curry más 4 aleatorios; F1 usa ALO y VER más 6 aleatorios (COL y ANT no están en las
+158 imágenes); chino usa 8 clases distintas; banderas usa el mismo renderer de
+`utils/generar_banderas.py` para las tres filas. El resto del índice se mantiene, con
+`latente_4` en lugar de `latente_2`. `resultados/ej2/README.md` indexa las figuras.
