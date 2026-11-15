@@ -130,8 +130,20 @@ def test_loss_es_reconstruccion_mas_lambda_por_kl():
     _fijar_ruido(vae, np.random.default_rng(5).normal(size=(8, 2)))
     total = vae.evaluate(X, X, MSE())["loss"]
     reconstruccion = MSE().value(X, vae.predict(X))
-    # Por muestra: ‖x − x'‖² + λ·KL, dividido por la cantidad de features como MSE.
-    assert total == pytest.approx(reconstruccion + 0.5 * vae.kl_divergence(X) / X.shape[1])
+    # L promedia sobre muestras y features; el KL se promedia solo sobre muestras.
+    assert total == pytest.approx(reconstruccion + 0.5 * vae.kl_divergence(X))
+
+
+@pytest.mark.parametrize("n_features", [6, 12])
+def test_kl_no_se_divide_por_la_cantidad_de_features(n_features):
+    X = _datos(n_features=n_features)
+    eps = np.random.default_rng(11).normal(size=(8, 2))
+    con_kl = _vae(n_features=n_features, kl_weight=1.0)
+    sin_kl = _vae(n_features=n_features, kl_weight=0.0)
+    _fijar_ruido(con_kl, eps)
+    _fijar_ruido(sin_kl, eps)
+    aporte = con_kl.evaluate(X, X, MSE())["loss"] - sin_kl.evaluate(X, X, MSE())["loss"]
+    assert aporte == pytest.approx(con_kl.kl_divergence(X))
 
 
 # --- Gradientes ---

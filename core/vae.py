@@ -12,9 +12,13 @@ y la función a minimizar es J = L + λR (ec. 19.12), por muestra:
     L = pérdida de reconstrucción entre x y x' = decoder(z)
     R = KL(q(z/x) || N(0, I)) = ½ Σ_k (exp(s_k) + μ_k² − 1 − s_k)
 
-Las pérdidas del motor promedian sobre muestras y features, así que R se
-normaliza igual: con MSE, J = (1 / (n·d)) Σ_muestras [‖x − x'‖² + λ·KL], que es
-la expresión de los apuntes salvo el factor constante 1/d.
+L promedia sobre muestras y features; R se suma sobre el espacio latente y se
+promedia solo sobre muestras, que es la normalización estándar de β-VAE:
+
+    J = mean_n [L(x_n, x'_n)] + λ · mean_n [KL(q(z/x_n) || N(0, I))]
+
+No se divide el KL por la cantidad de features: así λ no depende de la
+resolución de la entrada.
 """
 
 import numpy as np
@@ -88,7 +92,7 @@ class VariationalAutoencoder(Autoencoder):
             raise RuntimeError("backward antes de predict: no hay μ, s ni ε guardados.")
         mu, log_var, eps = self._mu, self._log_var, self._eps
         grad_z = self.decoder.backward(y_true, y_pred, loss, l2=l2)
-        scale = self.kl_weight / y_true.size
+        scale = self.kl_weight / y_true.shape[0]
         grad_mu = grad_z + scale * mu
         grad_log_var = grad_z * eps * 0.5 * np.exp(0.5 * log_var) + scale * 0.5 * (
             np.exp(log_var) - 1.0
@@ -111,7 +115,7 @@ class VariationalAutoencoder(Autoencoder):
     ) -> dict[str, float]:
         """Como en Network, pero "loss" es J = L + λR con una muestra de z por entrada."""
         result = super()._scores(X, y, loss, metric, metrics)
-        result["loss"] += self.kl_weight * _kl_sum(self._mu, self._log_var) / y.size
+        result["loss"] += self.kl_weight * _kl_sum(self._mu, self._log_var) / y.shape[0]
         return result
 
     def _noise(self, shape: tuple[int, ...]) -> np.ndarray:
