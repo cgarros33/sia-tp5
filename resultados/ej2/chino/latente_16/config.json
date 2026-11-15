@@ -1,0 +1,23 @@
+{
+  "dataset": "chino",
+  "tipo": "imagen",
+  "d": 256,
+  "forma": [
+    16,
+    16
+  ],
+  "modelo": "vae",
+  "latente": 16,
+  "capacidad": [
+    64,
+    32
+  ],
+  "beta": 1.0,
+  "lr": 0.0003,
+  "perdida": "binary_crossentropy",
+  "batch_size": 128,
+  "epocas": 1000,
+  "paciencia": 100,
+  "semilla_split": 2026,
+  "escalador": null
+}

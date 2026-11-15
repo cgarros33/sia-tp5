@@ -1,0 +1,38 @@
+{
+  "recon_bce": {
+    "media": 0.03935440200714619,
+    "desvio": 5.6611342420612526e-05
+  },
+  "recon_mse": {
+    "media": 0.0007896217306964196,
+    "desvio": 3.5106255042685845e-06
+  },
+  "pixeles_mal": {
+    "media": 0.0,
+    "desvio": 0.0
+  },
+  "kl_medio": {
+    "media": NaN,
+    "desvio": NaN
+  },
+  "epocas": {
+    "media": 1000.0,
+    "desvio": 0.0
+  },
+  "nn_dist": {
+    "media": 0.2719827828270483,
+    "desvio": 0.03921770329258413
+  },
+  "unidades_activas": {
+    "media": 0.0,
+    "desvio": 0.0
+  },
+  "val_elbo": {
+    "media": 0.03872734200789899,
+    "desvio": 0.00012593637838804705
+  },
+  "val_recon": {
+    "media": 0.0007703665881842195,
+    "desvio": 9.441994644703563e-06
+  }
+}

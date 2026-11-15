@@ -1,0 +1,23 @@
+{
+  "dataset": "f1",
+  "tipo": "imagen",
+  "d": 400,
+  "forma": [
+    20,
+    20
+  ],
+  "modelo": "vae",
+  "latente": 16,
+  "capacidad": [
+    64,
+    32
+  ],
+  "beta": 0.1,
+  "lr": 0.0003,
+  "perdida": "binary_crossentropy",
+  "batch_size": 8,
+  "epocas": 1000,
+  "paciencia": 100,
+  "semilla_split": 2026,
+  "escalador": null
+}
