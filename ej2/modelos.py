@@ -49,9 +49,10 @@ def construir_vae_imagen(
     salida: str = "sigmoid",
     semilla: int = 0,
     beta: float = 1.0,
+    free_bits: float = 0.0,
 ) -> VariationalAutoencoder:
     encoder, decoder = _redes(d, latente, capacidad, salida, semilla)
-    return VariationalAutoencoder(encoder, decoder, kl_weight=beta)
+    return VariationalAutoencoder(encoder, decoder, kl_weight=beta, free_bits=free_bits)
 
 
 def construir_ae_imagen(
@@ -81,10 +82,20 @@ def construir_ae_imagen(
 
 
 def construir_vae_tabular(
-    latente: int, capacidad: Sequence[int], semilla: int = 0, beta: float = 1.0
+    latente: int,
+    capacidad: Sequence[int],
+    semilla: int = 0,
+    beta: float = 1.0,
+    free_bits: float = 0.0,
 ) -> VariationalAutoencoder:
     return construir_vae_imagen(
-        12, latente, capacidad, salida="identity", semilla=semilla, beta=beta
+        12,
+        latente,
+        capacidad,
+        salida="identity",
+        semilla=semilla,
+        beta=beta,
+        free_bits=free_bits,
     )
 
 

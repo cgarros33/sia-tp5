@@ -130,3 +130,13 @@ def test_datos_no_importa_banderas():
         "assert 'ej2.banderas' not in sys.modules, 'datos importó banderas'"
     )
     subprocess.run([sys.executable, "-c", codigo], cwd=RAIZ, check=True)
+
+
+def test_archivos_imagen_apuntan_a_las_resoluciones_nuevas():
+    from ej2.datos import ARCHIVOS_IMAGEN
+
+    assert ARCHIVOS_IMAGEN == {
+        "f1": "f1_32x32.npz",
+        "nba": "nba_30x36.npz",
+        "chino": "chino_32x32.npz",
+    }

@@ -1,61 +1,63 @@
 {
   "semillas": [0, 1, 2, 3, 4],
   "semilla_split": 2026,
+  "calentamiento_frac": 0.2,
+  "free_bits": 0.0,
   "base": {
-    "latente": 16,
-    "capacidad": [128, 64],
+    "latente": 4,
+    "capacidad": [256, 128],
     "beta": 1.0,
     "lr": 0.001,
-    "perdida": "binary_crossentropy",
+    "perdida": "mse",
     "max_epocas": 1000,
-    "paciencia": 100
+    "paciencia": 200
   },
   "pasos": [
-    {"id": "1_latente", "nombre": "latente", "valores": [2, 8, 16, 32]},
-    {"id": "2_capacidad", "nombre": "capacidad", "valores": [[64, 32], [128, 64], [256, 128]]},
-    {"id": "3_beta", "nombre": "beta", "valores": [0.1, 1.0, 5.0]},
+    {"id": "1_latente", "nombre": "latente", "valores": [4, 8, 16]},
+    {"id": "2_capacidad", "nombre": "capacidad", "valores": [[128, 64], [256, 128]]},
+    {"id": "3_beta", "nombre": "beta", "valores": [0.01, 0.1, 1.0, 5.0]},
     {"id": "4_lr", "nombre": "lr", "valores": [0.0003, 0.001, 0.003]},
-    {"id": "5_perdida", "nombre": "perdida", "valores": ["binary_crossentropy", "mse"]}
+    {"id": "5_perdida", "nombre": "perdida", "valores": ["mse"]}
   ],
   "datasets": {
     "nba": {
       "tipo": "imagen",
-      "d": 480,
-      "forma": [20, 24],
+      "d": 1080,
+      "forma": [30, 36],
       "batch_size": 128,
       "semillas_barrido": 5,
-      "epocas_barrido": 500,
-      "perdidas": ["binary_crossentropy", "mse"],
+      "epocas_barrido": 400,
+      "perdidas": ["mse"],
       "max_epocas": 1000,
-      "paciencia": 100,
+      "paciencia": 200,
       "semillas_final": 5,
       "semillas_latente": 5
     },
     "f1": {
       "tipo": "imagen",
-      "d": 400,
-      "forma": [20, 20],
-      "batch_size": 8,
+      "d": 1024,
+      "forma": [32, 32],
+      "batch_size": 16,
       "semillas_barrido": 5,
-      "epocas_barrido": 500,
-      "perdidas": ["binary_crossentropy", "mse"],
+      "epocas_barrido": 400,
+      "perdidas": ["mse"],
       "max_epocas": 1000,
-      "paciencia": 100,
+      "paciencia": 200,
       "semillas_final": 5,
       "semillas_latente": 5
     },
     "chino": {
       "tipo": "imagen",
-      "d": 256,
-      "forma": [16, 16],
-      "batch_size": 128,
-      "semillas_barrido": 3,
-      "epocas_barrido": 200,
-      "perdidas": ["binary_crossentropy"],
+      "d": 1024,
+      "forma": [32, 32],
+      "batch_size": 64,
+      "semillas_barrido": 5,
+      "epocas_barrido": 300,
+      "perdidas": ["mse"],
       "max_epocas": 1000,
-      "paciencia": 100,
+      "paciencia": 200,
       "semillas_final": 5,
-      "semillas_latente": 3
+      "semillas_latente": 5
     },
     "banderas": {
       "tipo": "tabular",
@@ -63,10 +65,10 @@
       "forma": [1, 12],
       "batch_size": 32,
       "semillas_barrido": 5,
-      "epocas_barrido": 500,
+      "epocas_barrido": 400,
       "perdidas": ["mse"],
       "max_epocas": 1000,
-      "paciencia": 100,
+      "paciencia": 200,
       "semillas_final": 5,
       "semillas_latente": 5
     }

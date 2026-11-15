@@ -7,18 +7,21 @@ reparametrización (ec. 19.6):
 
     z = μ + ε ⊙ σ,    ε ~ N(0, I),    σ = exp(s / 2)
 
-y la función a minimizar es J = L + λR (ec. 19.12), por muestra:
+y la función a minimizar es J = L + λR (ec. 19.12). La reconstrucción que
+devuelve core/losses.py promedia sobre muestras **y** features (n·d), así que
+el KL se normaliza por la misma cantidad de features para que λ no dependa de
+la resolución (β-VAE estándar con reconstrucción sumada sobre píxeles):
 
-    L = pérdida de reconstrucción entre x y x' = decoder(z)
-    R = KL(q(z/x) || N(0, I)) = ½ Σ_k (exp(s_k) + μ_k² − 1 − s_k)
+    J = mean_{n,d} [ℓ(x_n, x'_n)] + λ · mean_n [KL(q(z/x_n) || N(0, I))] / d
 
-L promedia sobre muestras y features; R se suma sobre el espacio latente y se
-promedia solo sobre muestras, que es la normalización estándar de β-VAE:
+Sin el factor 1/d el gradiente del KL sobre el encoder queda multiplicado por
+d respecto del de reconstrucción y el posterior colapsa (μ → 0, s → 0).
 
-    J = mean_n [L(x_n, x'_n)] + λ · mean_n [KL(q(z/x_n) || N(0, I))]
-
-No se divide el KL por la cantidad de features: así λ no depende de la
-resolución de la entrada.
+free_bits > 0 impone un piso por dimensión latente (Kingma et al., 2016): cada
+dimensión puede guardar hasta free_bits nats sin costo. Se aplica sobre la KL
+promedio del lote de esa dimensión; las dimensiones por debajo del piso no
+reciben gradiente de KL. La métrica kl_divergence siempre informa la KL real,
+sin el piso.
 """
 
 import numpy as np
@@ -33,17 +36,27 @@ class VariationalAutoencoder(Autoencoder):
 
     encoder: salida de 2 · latent_dim, [μ, log Σ], con activación identidad
     (los dos son valores reales sin cota). decoder: entrada de latent_dim.
-    kl_weight es λ. El ruido ε sale de un generador hijo del rng del encoder,
-    así que muestrear no cambia el orden de los lotes.
+    kl_weight es λ y free_bits el piso por dimensión. El ruido ε sale de un
+    generador hijo del rng del encoder, así que muestrear no cambia el orden de
+    los lotes.
     """
 
     encoder_outputs_per_latent = 2
 
-    def __init__(self, encoder: Network, decoder: Network, kl_weight: float = 1.0) -> None:
+    def __init__(
+        self,
+        encoder: Network,
+        decoder: Network,
+        kl_weight: float = 1.0,
+        free_bits: float = 0.0,
+    ) -> None:
         super().__init__(encoder, decoder)
         if kl_weight < 0:
             raise ValueError(f"kl_weight no puede ser negativo, llegó {kl_weight}")
+        if free_bits < 0:
+            raise ValueError(f"free_bits no puede ser negativo, llegó {free_bits}")
         self.kl_weight = kl_weight
+        self.free_bits = float(free_bits)
         self.noise_rng = encoder.rng.spawn(1)[0]
         # Del último predict, para el backward.
         self._mu: np.ndarray | None = None
@@ -74,7 +87,10 @@ class VariationalAutoencoder(Autoencoder):
         return self.decode(self._noise((n, self.latent_dim)))
 
     def kl_divergence(self, X: np.ndarray) -> float:
-        """KL(q(z/x) || N(0, I)) promedio por muestra, sumada sobre el espacio latente."""
+        """KL(q(z/x) || N(0, I)) promedio por muestra, sumada sobre el latente.
+
+        Es la métrica real: no aplica free bits ni la normalización por d.
+        """
         mu, log_var = self.latent_distribution(X)
         return _kl_sum(mu, log_var) / X.shape[0]
 
@@ -87,15 +103,21 @@ class VariationalAutoencoder(Autoencoder):
         ∂z/∂μ = 1 y ∂z/∂σ = ε, es decir ∂z/∂s = ε·σ/2; R no pasa por el
         decoder y aporta ∂R/∂μ = μ y ∂R/∂s = ½ (exp(s) − 1). Con eso sigue el
         backpropagation por el encoder.
+
+        La escala λ / (n·d) es la de J: la reconstrucción promedia sobre n·d.
+        Con free_bits, las dimensiones cuya KL promedio no supera el piso no
+        reciben gradiente de KL.
         """
         if self._mu is None:
             raise RuntimeError("backward antes de predict: no hay μ, s ni ε guardados.")
         mu, log_var, eps = self._mu, self._log_var, self._eps
         grad_z = self.decoder.backward(y_true, y_pred, loss, l2=l2)
-        scale = self.kl_weight / y_true.shape[0]
-        grad_mu = grad_z + scale * mu
-        grad_log_var = grad_z * eps * 0.5 * np.exp(0.5 * log_var) + scale * 0.5 * (
-            np.exp(log_var) - 1.0
+        escala = self.kl_weight / y_true.size
+        activa = self._mascara_free_bits(mu, log_var)
+        grad_mu = grad_z + escala * mu * activa
+        grad_log_var = (
+            grad_z * eps * 0.5 * np.exp(0.5 * log_var)
+            + escala * 0.5 * (np.exp(log_var) - 1.0) * activa
         )
         grad = np.hstack([grad_mu, grad_log_var])
         for layer in reversed(self.encoder.layers):
@@ -115,13 +137,32 @@ class VariationalAutoencoder(Autoencoder):
     ) -> dict[str, float]:
         """Como en Network, pero "loss" es J = L + λR con una muestra de z por entrada."""
         result = super()._scores(X, y, loss, metric, metrics)
-        result["loss"] += self.kl_weight * _kl_sum(self._mu, self._log_var) / y.shape[0]
+        result["loss"] += self.kl_weight * self._regularizador(self._mu, self._log_var) / y.shape[1]
         return result
+
+    def _regularizador(self, mu: np.ndarray, log_var: np.ndarray) -> float:
+        """Σ_k mean_n KL_nk, con el piso free_bits por dimensión si corresponde."""
+        if self.free_bits <= 0.0:
+            return _kl_sum(mu, log_var) / mu.shape[0]
+        kl_dim = _kl_por_dimension(mu, log_var).mean(axis=0)
+        return float(np.sum(np.maximum(kl_dim, self.free_bits)))
+
+    def _mascara_free_bits(self, mu: np.ndarray, log_var: np.ndarray) -> np.ndarray | float:
+        """1 por dimensión activa, 0 para las que quedan por debajo de free_bits."""
+        if self.free_bits <= 0.0:
+            return 1.0
+        kl_dim = _kl_por_dimension(mu, log_var).mean(axis=0)
+        return (kl_dim > self.free_bits).astype(float)
 
     def _noise(self, shape: tuple[int, ...]) -> np.ndarray:
         return self.noise_rng.standard_normal(shape)
 
 
+def _kl_por_dimension(mu: np.ndarray, log_var: np.ndarray) -> np.ndarray:
+    """½ (exp(s) + μ² − 1 − s) por muestra y dimensión latente."""
+    return 0.5 * (np.exp(log_var) + mu**2 - 1.0 - log_var)
+
+
 def _kl_sum(mu: np.ndarray, log_var: np.ndarray) -> float:
     """Σ sobre muestras y dimensiones latentes de ½ (exp(s) + μ² − 1 − s)."""
-    return float(0.5 * np.sum(np.exp(log_var) + mu**2 - 1.0 - log_var))
+    return float(np.sum(_kl_por_dimension(mu, log_var)))

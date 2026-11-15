@@ -8,11 +8,11 @@ from core.optimizers import Adam
 from core.vae import VariationalAutoencoder
 
 
-def _vae(seed=0, n_features=6, hidden=5, latent=2, out="sigmoid", kl_weight=1.0):
+def _vae(seed=0, n_features=6, hidden=5, latent=2, out="sigmoid", kl_weight=1.0, free_bits=0.0):
     rng = np.random.default_rng(seed)
     encoder = Network([n_features, hidden, 2 * latent], output_activation="identity", rng=rng)
     decoder = Network([latent, hidden, n_features], output_activation=out, rng=rng)
-    return VariationalAutoencoder(encoder, decoder, kl_weight=kl_weight)
+    return VariationalAutoencoder(encoder, decoder, kl_weight=kl_weight, free_bits=free_bits)
 
 
 def _datos(n=8, n_features=6, seed=1):
@@ -124,18 +124,18 @@ def test_kl_es_cero_cuando_q_es_la_normal_estandar():
     assert vae.kl_divergence(_datos()) == 0.0
 
 
-def test_loss_es_reconstruccion_mas_lambda_por_kl():
+def test_loss_es_reconstruccion_mas_lambda_por_kl_normalizado():
     vae = _vae(kl_weight=0.5)
     X = _datos()
     _fijar_ruido(vae, np.random.default_rng(5).normal(size=(8, 2)))
     total = vae.evaluate(X, X, MSE())["loss"]
     reconstruccion = MSE().value(X, vae.predict(X))
-    # L promedia sobre muestras y features; el KL se promedia solo sobre muestras.
-    assert total == pytest.approx(reconstruccion + 0.5 * vae.kl_divergence(X))
+    # L promedia sobre muestras y features; el KL se divide por d.
+    assert total == pytest.approx(reconstruccion + 0.5 * vae.kl_divergence(X) / X.shape[1])
 
 
 @pytest.mark.parametrize("n_features", [6, 12])
-def test_kl_no_se_divide_por_la_cantidad_de_features(n_features):
+def test_kl_se_normaliza_por_la_cantidad_de_features(n_features):
     X = _datos(n_features=n_features)
     eps = np.random.default_rng(11).normal(size=(8, 2))
     con_kl = _vae(n_features=n_features, kl_weight=1.0)
@@ -143,7 +143,40 @@ def test_kl_no_se_divide_por_la_cantidad_de_features(n_features):
     _fijar_ruido(con_kl, eps)
     _fijar_ruido(sin_kl, eps)
     aporte = con_kl.evaluate(X, X, MSE())["loss"] - sin_kl.evaluate(X, X, MSE())["loss"]
-    assert aporte == pytest.approx(con_kl.kl_divergence(X))
+    assert aporte == pytest.approx(con_kl.kl_divergence(X) / n_features)
+
+
+def test_free_bits_pone_un_piso_por_dimension():
+    from core.vae import _kl_por_dimension
+
+    vae = _vae(kl_weight=1.0, free_bits=0.5)
+    X = _datos()
+    _fijar_ruido(vae, np.random.default_rng(12).normal(size=(8, 2)))
+    total = vae.evaluate(X, X, MSE())["loss"]
+    reconstruccion = MSE().value(X, vae.predict(X))
+    kl_dim = _kl_por_dimension(vae._mu, vae._log_var).mean(axis=0)
+    esperado = float(np.sum(np.maximum(kl_dim, 0.5))) / X.shape[1]
+    assert total == pytest.approx(reconstruccion + esperado)
+
+
+def test_free_bits_no_cambia_la_metrica_kl_real():
+    vae = _vae(kl_weight=1.0, free_bits=100.0)
+    X = _datos()
+    sin_piso = _vae(kl_weight=0.0, free_bits=0.0)
+    assert vae.kl_divergence(X) == pytest.approx(sin_piso.kl_divergence(X))
+
+
+def test_free_bits_muy_alto_anula_el_gradiente_del_kl():
+    X = _datos()
+    eps = np.random.default_rng(13).normal(size=(8, 2))
+    con_piso = _vae(kl_weight=1.0, free_bits=1e6)
+    sin_kl = _vae(kl_weight=0.0, free_bits=0.0)
+    _fijar_ruido(con_piso, eps)
+    _fijar_ruido(sin_kl, eps)
+    con_piso.backward(X, con_piso.predict(X), MSE())
+    sin_kl.backward(X, sin_kl.predict(X), MSE())
+    for g, h in zip(con_piso.grads, sin_kl.grads, strict=True):
+        np.testing.assert_allclose(g, h)
 
 
 # --- Gradientes ---

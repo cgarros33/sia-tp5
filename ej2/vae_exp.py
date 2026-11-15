@@ -6,12 +6,18 @@
 
 El barrido es secuencial por pasos (latente, capacidad, beta, lr, pérdida) y
 cada paso se puede retomar: si el CSV existe y la config no cambió, solo se
-corren las combinaciones que faltan. La fase final entrena el ganador y los
-modelos de latente 2 y 16 (VAE y AE determinístico) y guarda pesos, historias,
-métricas de test y muestras para las figuras.
+corren las combinaciones que faltan. Todos los pasos descartan las corridas
+colapsadas (menos de k/2 unidades activas o KL <= 0.01). Si el ganador del
+barrido sigue colapsado, se sube por la escalera de NIVELES (más warm-up, free
+bits y capacidad) hasta que la validación muestre un latente activo.
+
+La fase final entrena el ganador y los modelos de latente 4 y 16 (VAE y AE
+determinístico) y guarda pesos, historias, métricas de test y muestras para las
+figuras.
 """
 
 import argparse
+import copy
 import csv
 import hashlib
 import json
@@ -23,7 +29,7 @@ from pathlib import Path
 
 import numpy as np
 
-from core.callbacks import EarlyStopping
+from core.callbacks import Callback, EarlyStopping
 from core.losses import MSE, BinaryCrossEntropy, get_loss
 from core.optimizers import Adam
 from core.vae import VariationalAutoencoder
@@ -40,6 +46,43 @@ RUTA_CONFIG = RAIZ / "ej2" / "config.json"
 RUTA_RESULTADOS = RAIZ / "resultados" / "ej2"
 MUESTRAS = 32
 
+# Escalera de reintentos cuando el barrido sigue colapsado. El nivel 0 es el
+# plan base; los siguientes alargan el warm-up, agregan free bits y capacidad.
+NIVELES = (
+    {
+        "beta": [0.01, 0.1, 1.0, 5.0],
+        "calentamiento_frac": 0.2,
+        "free_bits": 0.0,
+        "capacidades": [[128, 64], [256, 128]],
+        "max_epocas": 1000,
+        "paciencia": 200,
+    },
+    {
+        "beta": [0.01, 0.1, 1.0],
+        "calentamiento_frac": 0.4,
+        "free_bits": 0.05,
+        "capacidades": [[128, 64], [256, 128]],
+        "max_epocas": 1200,
+        "paciencia": 250,
+    },
+    {
+        "beta": [0.001, 0.01, 0.1],
+        "calentamiento_frac": 0.5,
+        "free_bits": 0.1,
+        "capacidades": [[256, 128], [512, 256]],
+        "max_epocas": 1500,
+        "paciencia": 300,
+    },
+    {
+        "beta": [0.0001, 0.001, 0.01],
+        "calentamiento_frac": 0.5,
+        "free_bits": 0.2,
+        "capacidades": [[256, 128], [512, 256]],
+        "max_epocas": 1500,
+        "paciencia": 300,
+    },
+)
+
 CAMPOS_BARRIDO = [
     "paso",
     "valor",
@@ -52,6 +95,26 @@ CAMPOS_BARRIDO = [
     "segundos",
     "valido",
 ]
+
+
+class CalentamientoKL(Callback):
+    """Sube kl_weight de 0 a beta en las primeras `epocas` épocas.
+
+    El decoder aprende a reconstruir como autoencoder determinístico antes de
+    que el KL lo apague; después el término se introduce linealmente y poda las
+    dimensiones que no aportan (Bowman et al., 2016).
+    """
+
+    def __init__(self, beta: float, epocas: int) -> None:
+        self.beta = float(beta)
+        self.epocas = max(1, int(epocas))
+
+    def on_train_begin(self, network) -> None:
+        network.kl_weight = 0.0
+
+    def on_epoch_end(self, epoch: int, logs: dict[str, float], network) -> bool:
+        network.kl_weight = self.beta * min(1.0, epoch / self.epocas)
+        return False
 
 
 def _leer_config() -> dict:
@@ -97,6 +160,7 @@ def _construir(
     salida: str,
     semilla: int,
     beta: float = 1.0,
+    free_bits: float = 0.0,
 ):
     if modelo == "ae":
         if tipo == "imagen":
@@ -104,9 +168,17 @@ def _construir(
         return construir_ae_tabular(latente, capacidad, semilla=semilla)
     if tipo == "imagen":
         return construir_vae_imagen(
-            d, latente, capacidad, salida=salida, semilla=semilla, beta=beta
+            d,
+            latente,
+            capacidad,
+            salida=salida,
+            semilla=semilla,
+            beta=beta,
+            free_bits=free_bits,
         )
-    return construir_vae_tabular(latente, capacidad, semilla=semilla, beta=beta)
+    return construir_vae_tabular(
+        latente, capacidad, semilla=semilla, beta=beta, free_bits=free_bits
+    )
 
 
 def _kl_por_dimension(mu: np.ndarray, log_var: np.ndarray) -> np.ndarray:
@@ -201,6 +273,10 @@ def _entrenar(tarea: dict) -> dict:
     X_test = X[split == "test"]
     y_test = y[split == "test"]
     salida = "sigmoid" if cfg["perdida"] == "binary_crossentropy" else "identity"
+    beta = float(cfg["beta"])
+    free_bits = float(cfg.get("free_bits", 0.0))
+    epocas = int(tarea["epocas"])
+    calentamiento = max(50, int(round(float(cfg.get("calentamiento_frac", 0.2)) * epocas)))
     modelo = _construir(
         ds["tipo"],
         tarea["modelo"],
@@ -209,10 +285,19 @@ def _entrenar(tarea: dict) -> dict:
         cfg["capacidad"],
         salida,
         semilla,
-        beta=float(cfg["beta"]),
+        beta=beta,
+        free_bits=free_bits,
     )
     loss = get_loss(cfg["perdida"])
-    metricas = None
+
+    def recon_epoca(y_true, _y_pred):
+        """Reconstrucción determinística (sin ruido) para el early stopping."""
+        reconstruccion = modelo.decode(modelo.encode(y_true))
+        if ds["tipo"] == "imagen":
+            reconstruccion = np.clip(reconstruccion, 0.0, 1.0)
+        return MSE().value(y_true, reconstruccion)
+
+    metricas = {"recon": recon_epoca}
     if isinstance(modelo, VariationalAutoencoder):
 
         def kl_epoca(_y_true, _y_pred):
@@ -221,29 +306,36 @@ def _entrenar(tarea: dict) -> dict:
         def activas_epoca(_y_true, _y_pred):
             return float(_unidades_activas(modelo._mu, modelo._log_var))
 
-        metricas = {"kl": kl_epoca, "activas": activas_epoca}
-    callbacks = [
+        metricas |= {"kl": kl_epoca, "activas": activas_epoca}
+    callbacks = []
+    if isinstance(modelo, VariationalAutoencoder):
+        callbacks.append(CalentamientoKL(beta, calentamiento))
+    callbacks.append(
         EarlyStopping(
             patience=int(ds["paciencia"]),
-            monitor="val_loss",
+            monitor="val_recon",
             mode="min",
             restore_best=True,
         )
-    ]
+    )
     inicio = time.perf_counter()
     historia = modelo.fit(
         X_train,
         optimizer=Adam(lr=cfg["lr"]),
         loss=loss,
-        epochs=int(tarea["epocas"]),
+        epochs=epocas,
         batch_size=int(ds["batch_size"]),
         validation=(X_val, X_val),
         callbacks=callbacks,
         metrics=metricas,
     )
     segundos = time.perf_counter() - inicio
+    if isinstance(modelo, VariationalAutoencoder):
+        # Si el early stopping cortó durante el warm-up, el objetivo guardado
+        # queda igual al final del entrenamiento.
+        modelo.kl_weight = beta
     val_elbo = modelo.evaluate(X_val, X_val, loss)["loss"]
-    val_recon = MSE().value(X_val, modelo.decode(modelo.encode(X_val)))
+    val_recon = recon_epoca(X_val, None)
     fila = {
         "paso": tarea.get("paso", ""),
         "valor": tarea.get("valor", ""),
@@ -349,78 +441,146 @@ def _elegir(paso: dict, filas: list[dict], cfg: dict, ds: dict) -> tuple[str, di
     def _media(grupo: dict, etiqueta: str) -> float:
         return grupo.get(etiqueta, {}).get("media", float("inf"))
 
-    if paso["id"].startswith("3"):
-        latente = int(cfg["latente"])
-        candidatas = [
-            etiqueta
-            for etiqueta in etiquetas
-            if etiqueta in elbos
-            and _media(activas, etiqueta) >= 0.5 * latente
-            and _media(kls, etiqueta) > 0.01
-        ]
-        if not candidatas:
-            max_activas = max(_media(activas, etiqueta) for etiqueta in elbos)
-            candidatas = [
-                etiqueta for etiqueta in elbos if _media(activas, etiqueta) == max_activas
-            ]
-            motivo = (
-                "ningún beta cumplió activas/KL; se eligió el de más unidades activas "
-                f"({max_activas:g}) y, entre esos, la menor reconstrucción"
-            )
-        else:
-            motivo = "menor reconstrucción entre los betas con latente activo y KL > 0.01"
-        ganador = min(candidatas, key=lambda e: (recons[e]["media"], e))
-        detalle = {
-            "motivo": motivo,
-            "recon": {e: recons.get(e) for e in etiquetas},
-            "elbo": elbos,
-            "activas": {e: activas.get(e) for e in etiquetas},
-            "kl": {e: kls.get(e) for e in etiquetas},
-        }
-        return ganador, detalle
+    def _latente(etiqueta: str) -> int:
+        return int(float(etiqueta)) if paso["id"].startswith("1") else int(cfg["latente"])
 
-    mejor = min(elbos, key=lambda e: elbos[e]["media"])
+    def _activa(etiqueta: str) -> bool:
+        k = _latente(etiqueta)
+        return (
+            etiqueta in elbos
+            and _media(activas, etiqueta) >= 0.5 * k
+            and _media(kls, etiqueta) > 0.01
+        )
+
+    con_latente = [etiqueta for etiqueta in etiquetas if _activa(etiqueta)]
+    colapsado = not con_latente
+    if colapsado:
+        fracciones = {
+            etiqueta: _media(activas, etiqueta) / max(1, _latente(etiqueta)) for etiqueta in elbos
+        }
+        mejor_fraccion = max(fracciones.values())
+        candidatas = [etiqueta for etiqueta in elbos if fracciones[etiqueta] == mejor_fraccion]
+        aviso = (
+            "ningún valor cumplió activas/KL; se usó el de mayor fracción de unidades "
+            f"activas ({mejor_fraccion:.2f})"
+        )
+    else:
+        candidatas = con_latente
+        aviso = ""
+
+    detalle = {
+        "colapsado": colapsado,
+        "recon": {e: recons.get(e) for e in etiquetas},
+        "elbo": elbos,
+        "activas": {e: activas.get(e) for e in etiquetas},
+        "kl": {e: kls.get(e) for e in etiquetas},
+    }
+
+    if paso["id"].startswith("3"):
+        ganador = min(candidatas, key=lambda e: (recons[e]["media"], e))
+        motivo = (
+            "menor reconstrucción entre los betas con latente activo y KL > 0.01"
+            if not colapsado
+            else f"{aviso} y, entre esos, la menor reconstrucción"
+        )
+        return ganador, {"motivo": motivo, **detalle}
+
+    mejor = min(candidatas, key=lambda e: elbos[e]["media"])
     limite = elbos[mejor]["media"] + elbos[mejor]["desvio"]
-    candidatas = [e for e in etiquetas if e in elbos and elbos[e]["media"] <= limite]
+    finalistas = [e for e in candidatas if elbos[e]["media"] <= limite]
     if paso["id"].startswith("1"):
-        ganador = min(candidatas, key=float)
+        ganador = min(finalistas, key=float)
         motivo = "menor ELBO de validación; a menos de un desvío se prefiere el latente más chico"
     elif paso["id"].startswith("2"):
         orden = {etiqueta: i for i, etiqueta in enumerate(etiquetas)}
-        ganador = min(candidatas, key=lambda e: orden[e])
+        ganador = min(finalistas, key=lambda e: orden[e])
         motivo = "menor ELBO de validación; a menos de un desvío se prefiere la capacidad más chica"
     elif paso["id"].startswith("4"):
-        ganador = min(candidatas, key=float)
+        ganador = min(finalistas, key=float)
         motivo = "menor ELBO de validación; a menos de un desvío se prefiere el lr más chico"
     else:
-        mejor_recon = min(recons, key=lambda e: recons[e]["media"])
+        mejor_recon = min(finalistas, key=lambda e: recons[e]["media"])
         limite_recon = recons[mejor_recon]["media"] + recons[mejor_recon]["desvio"]
-        candidatas_recon = [
-            e for e in etiquetas if e in recons and recons[e]["media"] <= limite_recon
-        ]
+        finalistas_recon = [e for e in finalistas if recons[e]["media"] <= limite_recon]
         ganador = (
             "binary_crossentropy"
-            if "binary_crossentropy" in candidatas_recon
-            else min(candidatas_recon, key=lambda e: recons[e]["media"])
+            if "binary_crossentropy" in finalistas_recon
+            else min(finalistas_recon, key=lambda e: recons[e]["media"])
         )
         motivo = "menor error de reconstrucción determinístico; empate prefiere BCE"
-    return ganador, {"motivo": motivo, "recon": recons, "elbo": elbos}
+    if colapsado:
+        motivo = f"{aviso}; {motivo}"
+    return ganador, {"motivo": motivo, **detalle}
 
 
-def correr_barrido(nombre: str, trabajadores: int, forzar: bool) -> dict:
-    cfg_general = _leer_config()
-    ds = cfg_general["datasets"][nombre]
+def _aplicar_nivel(cfg_general: dict, ds: dict, nivel: int) -> tuple[dict, dict]:
+    """Copia la config y aplica los overrides del nivel anticolapso."""
+    if not 0 <= nivel < len(NIVELES):
+        raise ValueError(f"Nivel inválido: {nivel}. Opciones: 0..{len(NIVELES) - 1}")
+    overrides = NIVELES[nivel]
+    cfg = copy.deepcopy(cfg_general)
+    ds = copy.deepcopy(ds)
+    cfg["calentamiento_frac"] = overrides["calentamiento_frac"]
+    cfg["free_bits"] = overrides["free_bits"]
+    for paso in cfg["pasos"]:
+        if paso["id"].startswith("2"):
+            paso["valores"] = [list(c) for c in overrides["capacidades"]]
+        elif paso["id"].startswith("3"):
+            paso["valores"] = list(overrides["beta"])
+    cfg["base"]["capacidad"] = list(overrides["capacidades"][0])
+    cfg["base"]["beta"] = overrides["beta"][0]
+    cfg["base"]["max_epocas"] = overrides["max_epocas"]
+    cfg["base"]["paciencia"] = overrides["paciencia"]
+    ds["max_epocas"] = overrides["max_epocas"]
+    ds["paciencia"] = overrides["paciencia"]
+    return cfg, ds
+
+
+def _evaluar_nivel(nombre: str, ds: dict, cfg_final: dict, filas: list[dict]) -> tuple[bool, dict]:
+    """Acepta el nivel si el ganador usa el latente y mejora a la imagen media."""
+    if not filas:
+        return False, {"motivo": "no hay filas del ganador"}
+    X, _y, split, _extra = _cargar(nombre, ds["tipo"])
+    X_train = X[split == "train"]
+    X_val = X[split == "val"]
+    media = np.broadcast_to(np.mean(X_train, axis=0), X_val.shape)
+    baseline = float(MSE().value(X_val, media))
+    activas = float(np.mean([float(f["unidades_activas"]) for f in filas]))
+    kl = float(np.mean([float(f["kl_medio"]) for f in filas]))
+    recon = float(np.mean([float(f["val_recon"]) for f in filas]))
+    k = int(cfg_final["latente"])
+    cumple = activas >= 0.5 * k and kl > 0.01 and recon < baseline
+    return cumple, {
+        "unidades_activas": activas,
+        "kl_medio": kl,
+        "val_recon": recon,
+        "baseline": baseline,
+        "latente": k,
+    }
+
+
+def correr_barrido(nombre: str, trabajadores: int, forzar: bool, nivel: int = 0) -> dict:
+    base_cfg = _leer_config()
+    cfg_general, ds = _aplicar_nivel(base_cfg, base_cfg["datasets"][nombre], nivel)
     actual = {
         "latente": cfg_general["base"]["latente"],
         "capacidad": cfg_general["base"]["capacidad"],
         "beta": cfg_general["base"]["beta"],
         "lr": cfg_general["base"]["lr"],
         "perdida": cfg_general["base"]["perdida"],
+        "free_bits": cfg_general["free_bits"],
+        "calentamiento_frac": cfg_general["calentamiento_frac"],
+        "nivel_anticolapso": nivel,
     }
-    carpeta = RUTA_RESULTADOS / nombre / "barrido"
+    carpeta = (
+        RUTA_RESULTADOS / nombre / "barrido"
+        if nivel == 0
+        else RUTA_RESULTADOS / nombre / f"barrido_nivel_{nivel}"
+    )
     carpeta.mkdir(parents=True, exist_ok=True)
     elecciones = []
     semillas = list(range(int(ds["semillas_barrido"])))
+    filas_ganadoras: list[dict] = []
 
     for paso in cfg_general["pasos"]:
         valores = paso["valores"]
@@ -484,23 +644,84 @@ def correr_barrido(nombre: str, trabajadores: int, forzar: bool) -> dict:
         )
         ganador, detalle = _elegir(paso, filas, actual, ds)
         actual[paso["nombre"]] = _mapa_valores(valores)[ganador]
-        elecciones.append({"paso": paso["id"], "ganador": ganador, **detalle})
-        print(f"{nombre} {paso['id']}: gana {ganador}")
-        _escribir_elecciones(nombre, cfg_general, actual, elecciones)
+        filas_ganadoras = [f for f in filas if f["valor"] == ganador]
+        elecciones.append(
+            {
+                "paso": paso["id"],
+                "ganador": ganador,
+                "nivel_anticolapso": nivel,
+                **detalle,
+            }
+        )
+        print(f"{nombre} {paso['id']}: gana {ganador} (nivel {nivel})")
+        _escribir_elecciones(nombre, cfg_general, actual, elecciones, nivel=nivel)
 
-    _escribir_elecciones(nombre, cfg_general, actual, elecciones)
-    return {"config_final": actual, "pasos": elecciones}
+    aceptado, validacion = _evaluar_nivel(nombre, ds, actual, filas_ganadoras)
+    _escribir_elecciones(
+        nombre,
+        cfg_general,
+        actual,
+        elecciones,
+        nivel=nivel,
+        aceptado=aceptado,
+        validacion=validacion,
+    )
+    print(
+        f"{nombre}: nivel {nivel} {'aceptado' if aceptado else 'sigue colapsado'} "
+        f"(activas={validacion.get('unidades_activas', 0):.2f}, "
+        f"KL={validacion.get('kl_medio', 0):.4f}, "
+        f"recon={validacion.get('val_recon', 0):.4f} vs base "
+        f"{validacion.get('baseline', 0):.4f})"
+    )
+    return {
+        "config_final": actual,
+        "pasos": elecciones,
+        "aceptado": aceptado,
+        "validacion": validacion,
+        "nivel_anticolapso": nivel,
+    }
 
 
-def _escribir_elecciones(nombre: str, cfg_general: dict, actual: dict, elecciones: list) -> None:
+def correr_barrido_con_reintentos(nombre: str, trabajadores: int, forzar: bool) -> dict:
+    """Corre niveles 0..3 hasta que el ganador tenga un latente activo."""
+    ruta = RUTA_RESULTADOS / nombre / "elecciones.json"
+    if not forzar and ruta.exists():
+        previo = json.loads(ruta.read_text(encoding="utf-8"))
+        if previo.get("aceptado") is True:
+            nivel_previo = previo.get("nivel_anticolapso")
+            print(f"{nombre}: el barrido ya está aceptado (nivel {nivel_previo}).")
+            return previo
+    resultado = {}
+    for nivel in range(len(NIVELES)):
+        resultado = correr_barrido(nombre, trabajadores, forzar if nivel == 0 else False, nivel)
+        if resultado["aceptado"]:
+            return resultado
+        if nivel + 1 < len(NIVELES):
+            print(f"{nombre}: se sube al nivel anticolapso {nivel + 1}.")
+    return resultado
+
+
+def _escribir_elecciones(
+    nombre: str,
+    cfg_general: dict,
+    actual: dict,
+    elecciones: list,
+    nivel: int = 0,
+    aceptado: bool | None = None,
+    validacion: dict | None = None,
+) -> None:
     carpeta = RUTA_RESULTADOS / nombre
     carpeta.mkdir(parents=True, exist_ok=True)
     contenido = {
         "dataset": nombre,
         "semilla_split": cfg_general["semilla_split"],
         "config_final": actual,
+        "nivel_anticolapso": nivel,
         "pasos": elecciones,
     }
+    if aceptado is not None:
+        contenido["aceptado"] = bool(aceptado)
+        contenido["validacion"] = validacion
     (carpeta / "elecciones.json").write_text(
         json.dumps(contenido, indent=2, ensure_ascii=False), encoding="utf-8"
     )
@@ -536,6 +757,9 @@ def _correr_tareas(tareas: list[dict], trabajadores: int) -> list[dict]:
 
 
 def _config_carpeta(nombre: str, ds: dict, cfg: dict, latente: int, modelo: str, escalador):
+    calentamiento = max(
+        50, int(round(float(cfg.get("calentamiento_frac", 0.2)) * int(ds["max_epocas"])))
+    )
     return {
         "dataset": nombre,
         "tipo": ds["tipo"],
@@ -545,11 +769,14 @@ def _config_carpeta(nombre: str, ds: dict, cfg: dict, latente: int, modelo: str,
         "latente": latente,
         "capacidad": cfg["capacidad"],
         "beta": cfg["beta"],
+        "free_bits": float(cfg.get("free_bits", 0.0)),
         "lr": cfg["lr"],
         "perdida": cfg["perdida"],
         "batch_size": ds["batch_size"],
         "epocas": ds["max_epocas"],
         "paciencia": ds["paciencia"],
+        "calentamiento_epocas": calentamiento,
+        "nivel_anticolapso": int(cfg.get("nivel_anticolapso", 0)),
         "semilla_split": _leer_config()["semilla_split"],
         "escalador": escalador,
     }
@@ -561,8 +788,14 @@ def correr_final(nombre: str, trabajadores: int, forzar: bool) -> None:
         raise RuntimeError(f"Falta {ruta_elecciones}; corré primero --fase barrido.")
     elecciones = json.loads(ruta_elecciones.read_text(encoding="utf-8"))
     cfg_final = elecciones["config_final"]
-    cfg_general = _leer_config()
-    ds = cfg_general["datasets"][nombre]
+    nivel = int(cfg_final.get("nivel_anticolapso", elecciones.get("nivel_anticolapso", 0)))
+    base = _leer_config()
+    cfg_general, ds = _aplicar_nivel(base, base["datasets"][nombre], nivel)
+    if elecciones.get("aceptado") is False:
+        print(
+            f"ADVERTENCIA {nombre}: el barrido no logró un latente activo; "
+            "se entrena igual el mejor modelo encontrado."
+        )
     escalador = None
     if ds["tipo"] == "tabular":
         conjunto = datos.cargar_banderas()
@@ -574,9 +807,9 @@ def correr_final(nombre: str, trabajadores: int, forzar: bool) -> None:
 
     modelos = [
         ("final", "vae", int(cfg_final["latente"]), int(ds["semillas_final"])),
-        ("latente_2", "vae", 2, int(ds["semillas_latente"])),
+        ("latente_4", "vae", 4, int(ds["semillas_latente"])),
         ("latente_16", "vae", 16, int(ds["semillas_latente"])),
-        ("ae_latente_2", "ae", 2, int(ds["semillas_latente"])),
+        ("ae_latente_4", "ae", 4, int(ds["semillas_latente"])),
         ("ae_latente_16", "ae", 16, int(ds["semillas_latente"])),
     ]
     for carpeta, modelo, latente, semillas in modelos:
@@ -654,6 +887,8 @@ def correr_smoke(nombre: str) -> None:
             "latente": cfg_general["base"]["latente"],
             "capacidad": cfg_general["base"]["capacidad"],
             "beta": cfg_general["base"]["beta"],
+            "free_bits": cfg_general["free_bits"],
+            "calentamiento_frac": cfg_general["calentamiento_frac"],
             "lr": cfg_general["base"]["lr"],
             "perdida": ds["perdidas"][0],
         },
@@ -672,6 +907,12 @@ def main() -> int:
     parser.add_argument("--trabajadores", type=int, default=5)
     parser.add_argument("--hilos", type=int, default=4)
     parser.add_argument("--forzar", action="store_true")
+    parser.add_argument(
+        "--nivel",
+        type=int,
+        choices=range(len(NIVELES)),
+        help="Fija un nivel anticolapso en vez de reintentar 0..3 automáticamente.",
+    )
     args = parser.parse_args()
     if args.trabajadores < 1 or args.hilos < 1:
         parser.error("--trabajadores y --hilos tienen que ser >= 1")
@@ -679,7 +920,10 @@ def main() -> int:
     os.environ["OMP_NUM_THREADS"] = str(args.hilos)
     os.environ["MKL_NUM_THREADS"] = str(args.hilos)
     if args.fase == "barrido":
-        correr_barrido(args.dataset, args.trabajadores, args.forzar)
+        if args.nivel is None:
+            correr_barrido_con_reintentos(args.dataset, args.trabajadores, args.forzar)
+        else:
+            correr_barrido(args.dataset, args.trabajadores, args.forzar, args.nivel)
     elif args.fase == "final":
         correr_final(args.dataset, args.trabajadores, args.forzar)
     else:

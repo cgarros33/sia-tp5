@@ -41,3 +41,35 @@ def test_grilla_decodificada_tiene_el_tamano_de_la_grilla():
     salida = graficos._grilla_puntos(modelo, np.zeros(2), 1.0)
     assert salida.shape == (graficos.LADO_GRILLA**2, 12)
     assert Path(__file__).exists()
+
+
+def test_resumen_incluye_los_fijos_de_nba():
+    etiquetas = np.array(
+        ["a", "lebron", "Luka-Doncic", "Nikola-Jokic", "Stephen-Curry", "b", "c", "d", "e"]
+    )
+    indices = graficos._elegir_resumen("nba", etiquetas)
+    assert len(indices) == 8
+    assert {1, 2, 3, 4}.issubset(indices)
+
+
+def test_resumen_chino_elige_ocho_clases_distintas():
+    etiquetas = np.array([f"clase{i}" for i in range(15) for _ in range(2)])
+    indices = graficos._elegir_resumen("chino", etiquetas)
+    assert len(indices) == 8
+    assert len({etiquetas[i] for i in indices}) == 8
+
+
+def test_resumen_banderas_usa_todas_las_muestras_si_hay_pocas():
+    etiquetas = np.array(["a", "b", "c"])
+    indices = graficos._elegir_resumen("banderas", etiquetas)
+    assert sorted(indices) == [0, 1, 2]
+
+
+def test_render_auxiliar_de_banderas_usa_el_generador(tmp_path):
+    escalador = {"minimo": [0.0] * 12, "rango": [1.0] * 12}
+    vector = np.array([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.5])
+    imagenes = graficos._render_auxiliares("prueba", np.array([vector]), escalador, tmp_path)
+    assert len(imagenes) == 1
+    assert imagenes[0].shape == (160, 240, 3)
+    assert imagenes[0].min() >= 0.0 and imagenes[0].max() <= 1.0
+    assert (tmp_path / "prueba_00.png").exists()
