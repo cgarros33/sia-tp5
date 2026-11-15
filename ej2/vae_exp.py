@@ -527,10 +527,6 @@ def _aplicar_nivel(cfg_general: dict, ds: dict, nivel: int) -> tuple[dict, dict]
             paso["valores"] = [list(c) for c in overrides["capacidades"]]
         elif paso["id"].startswith("3"):
             paso["valores"] = list(overrides["beta"])
-    cfg["base"]["capacidad"] = list(overrides["capacidades"][0])
-    cfg["base"]["beta"] = overrides["beta"][0]
-    cfg["base"]["max_epocas"] = overrides["max_epocas"]
-    cfg["base"]["paciencia"] = overrides["paciencia"]
     ds["max_epocas"] = overrides["max_epocas"]
     ds["paciencia"] = overrides["paciencia"]
     return cfg, ds
