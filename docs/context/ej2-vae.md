@@ -848,8 +848,8 @@ dividir por `d`.
 - Chino se downsamplea 64×64 → 32×32 con promedio de bloques 2×2, se normaliza por el máximo
   de cada imagen y se invierte (`1 − x`): **fondo blanco y trazo negro**. Split 16/2/2 por
   clase = 240/30/30.
-- Los procesados vuelven a `data/procesadas/`, que es local y está en `.gitignore`: los `.npz`
-  y PNG procesados no se commitean nunca.
+- Los procesados vuelven a `data/procesadas/` y se commitean, igual que antes: los `.npz` y
+  PNG procesados van al repo para que el entrenamiento sea reproducible.
 - `data/banderas/procesadas/` (la carpeta movida) queda fuera de uso.
 
 ### 14.4 Hiperparámetros y antídotos contra el colapso

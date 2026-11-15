@@ -41,6 +41,24 @@ def generar(fila, ancho, salida):
     escribir_png(salida / f"{nombre}.png", ancho, alto, filas)
 
 
+def generar_vector(nombre, vector, ancho=240, salida=Path("data/banderas")):
+    """Renderiza un vector de 12 features con el mismo formato que el CSV.
+
+    `vector` usa el orden del dataset: 9 colores en [0, 1], rotada en {0, 1},
+    proporcion y aspecto sin escalar. Lo usan las figuras para dibujar
+    originales, reconstrucciones y muestras con una sola geometría.
+    """
+    vector = [float(v) for v in vector]
+    if len(vector) != 12:
+        raise ValueError(f"Se esperaba un vector de 12 features, llegó {len(vector)}")
+    colores = [min(255, max(0, round(c * 255))) for c in vector[:9]]
+    fila = [nombre]
+    fila.extend(str(c) for c in colores)
+    fila.extend([str(int(round(vector[9]))), f"{vector[10]:.6f}", f"{vector[11]:.6f}"])
+    Path(salida).mkdir(parents=True, exist_ok=True)
+    generar(fila, ancho, Path(salida))
+
+
 def main():
     parser = argparse.ArgumentParser(description="Genera banderas PNG a partir de un CSV.")
     parser.add_argument("csv", nargs="?", default="data/flags_tricolor.csv")

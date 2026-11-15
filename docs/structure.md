@@ -35,7 +35,7 @@ ej2/                   Exercise 2: VAE on four datasets (spec: docs/context/ej2-
   graficos.py          Figures; reads only from resultados/ej2/, writes resultados/ej2/<dataset>/figuras/
 tests/                 pytest suite, one file per core module (test_ej1_*.py for ej1/)
 data/                  Datasets (font.h, flags_tricolor.csv, raw images and chineseMNIST.csv)
-data/procesadas/       Processed .npz, PNGs and F1 manifests (local, gitignored, never committed)
+data/procesadas/       Processed .npz, PNGs and F1 manifests (committed)
 resultados/ej1/        Sweep output: one CSV per step, elecciones.json, final/ (weights, history)
 resultados/ej1b/       1b output: one CSV per experiment, elecciones.json, final/ (weights, test.csv)
 resultados/ej2/        VAE output: dedup manifests, sweep CSVs, final/ and latent_4/16 (weights, figures)

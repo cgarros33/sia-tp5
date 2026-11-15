@@ -33,9 +33,10 @@ HEADSHOTS = DATOS / "headshots"
 PROCESADAS = DATOS / "procesadas"
 RESULTADOS = RAIZ / "resultados" / "ej2"
 
-RES_F1 = (20, 20)
-RES_NBA = (20, 24)
-RES_CHINO = (16, 16)
+RES_F1 = (32, 32)
+RES_NBA = (30, 36)
+RES_CHINO = (32, 32)
+POR_CLASE_CHINO = 20
 SEMILLA_SPLIT = 2026
 
 
@@ -130,11 +131,105 @@ def _guardar_contacto(imagenes: np.ndarray, titulos: list[str], ruta: Path, colu
 # --- Deduplicación de F1 ---
 
 
+def _filas_nivel_superior(
+    raiz: Path, piloto_por_hash: dict[str, str] | None = None
+) -> list[dict]:
+    """Manifiesto completo de los archivos top-level (sin mirar by_ref)."""
+    filas = []
+    for ruta in sorted(p for p in raiz.glob("*/*") if p.is_file() and "by_ref" not in p.parts):
+        digest = _sha256(ruta)
+        with Image.open(ruta) as imagen:
+            ancho, alto = imagen.size
+        filas.append(
+            {
+                "archivo": str(ruta.relative_to(RAIZ)),
+                "codigo": ruta.stem,
+                "piloto": (piloto_por_hash or {}).get(digest, ruta.stem),
+                "temporada": ruta.parent.name,
+                "sha256": digest,
+                "ancho": ancho,
+                "alto": alto,
+            }
+        )
+    return filas
+
+
+def _deduplicar_filas(filas_completo: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Conserva una imagen por hash: temporada más nueva, luego mayor área."""
+    grupos: dict[str, list[dict]] = defaultdict(list)
+    for fila in filas_completo:
+        grupos[fila["sha256"]].append(fila)
+
+    conservados, descartados = [], []
+    for digest, filas in grupos.items():
+        filas = sorted(
+            filas,
+            key=lambda x: (-int(x["temporada"]), -(int(x["ancho"]) * int(x["alto"])), x["archivo"]),
+        )
+        conservados.append(filas[0])
+        for fila in filas[1:]:
+            descartados.append(
+                {
+                    "ruta_conservada": filas[0]["archivo"],
+                    "ruta_descartada": fila["archivo"],
+                    "sha256": digest,
+                    "temporada_conservada": filas[0]["temporada"],
+                    "temporada_descartada": fila["temporada"],
+                }
+            )
+    conservados.sort(key=lambda x: x["archivo"])
+    descartados.sort(key=lambda x: x["ruta_descartada"])
+    return conservados, descartados
+
+
+def _escribir_manifiestos(
+    filas_completo: list[dict],
+    conservados: list[dict],
+    descartados: list[dict],
+    filas_borrado: list[dict],
+) -> None:
+    with open(PROCESADAS / "f1_manifest_completo.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(filas_completo[0]))
+        writer.writeheader()
+        writer.writerows(filas_completo)
+    # El registro de by_ref borrados es histórico: la reconstrucción del
+    # manifiesto (sin by_ref) no debe borrarlo.
+    ruta_borrado = RESULTADOS / "dedup_headshots.csv"
+    if filas_borrado or not ruta_borrado.exists():
+        with open(ruta_borrado, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=["ruta_borrada", "sha256", "ruta_conservada"])
+            writer.writeheader()
+            writer.writerows(filas_borrado)
+    with open(PROCESADAS / "f1_manifest.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(conservados[0]))
+        writer.writeheader()
+        writer.writerows(conservados)
+    with open(RESULTADOS / "dedup_hash.csv", "w", newline="", encoding="utf-8") as f:
+        campos = list(descartados[0]) if descartados else [
+            "ruta_conservada",
+            "ruta_descartada",
+            "sha256",
+            "temporada_conservada",
+            "temporada_descartada",
+        ]
+        writer = csv.DictWriter(f, fieldnames=campos)
+        writer.writeheader()
+        writer.writerows(descartados)
+    por_piloto = {}
+    for fila in sorted(conservados, key=lambda x: (-int(x["temporada"]), x["archivo"])):
+        por_piloto.setdefault(fila["codigo"], fila)
+    with open(PROCESADAS / "f1_manifest_piloto.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(conservados[0]))
+        writer.writeheader()
+        writer.writerows(por_piloto.values())
+
+
 def deduplicar_headshots(raiz: Path = HEADSHOTS, permitir_huerfanos: bool = False) -> dict:
     """Borra los by_ref verificados y devuelve los manifiestos.
 
     Si los by_ref ya no existen y data/procesadas/f1_manifest.csv está, no
-    hace nada. Si no existen y el manifiesto tampoco, es un error.
+    hace nada. Si no existen y el manifiesto tampoco, lo reconstruye desde los
+    archivos top-level (el borrado ya se hizo).
 
     Un by_ref huérfano (sin duplicado exacto en el nivel superior de su
     temporada) aborta por defecto. Con permitir_huerfanos=True se copia antes
@@ -147,7 +242,17 @@ def deduplicar_headshots(raiz: Path = HEADSHOTS, permitir_huerfanos: bool = Fals
         if manifiesto_final.exists():
             print("Dedup F1: los by_ref ya no existen; manifiesto presente, se saltea.")
             return {"borrados": 0, "conservados": 158}
-        raise RuntimeError("No hay by_ref y falta f1_manifest.csv: no se puede deduplicar.")
+        # El borrado ya se hizo pero falta el manifiesto (por ejemplo, se limpió
+        # data/procesadas): se reconstruye desde los 172 archivos top-level.
+        _asegurar_dirs()
+        filas_completo = _filas_nivel_superior(raiz)
+        conservados, descartados = _deduplicar_filas(filas_completo)
+        _escribir_manifiestos(filas_completo, conservados, descartados, [])
+        print(
+            f"Dedup F1: sin by_ref; manifiesto reconstruido con {len(conservados)} imágenes "
+            f"únicas de {len({f['codigo'] for f in conservados})} pilotos."
+        )
+        return {"borrados": 0, "conservados": len(conservados)}
 
     _asegurar_dirs()
     top = sorted(p for p in raiz.glob("*/*") if p.is_file() and "by_ref" not in p.parts)
@@ -193,31 +298,9 @@ def deduplicar_headshots(raiz: Path = HEADSHOTS, permitir_huerfanos: bool = Fals
     for ref in refs:
         piloto_por_hash.setdefault(_sha256(ref), ref.stem)
 
-    filas_completo = []
-    for ruta in top:
-        codigo = ruta.stem
-        with Image.open(ruta) as imagen:
-            ancho, alto = imagen.size
-        filas_completo.append(
-            {
-                "archivo": str(ruta.relative_to(RAIZ)),
-                "codigo": codigo,
-                "piloto": piloto_por_hash.get(_sha256(ruta), codigo),
-                "temporada": ruta.parent.name,
-                "sha256": _sha256(ruta),
-                "ancho": ancho,
-                "alto": alto,
-            }
-        )
-
-    with open(PROCESADAS / "f1_manifest_completo.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(filas_completo[0]))
-        writer.writeheader()
-        writer.writerows(filas_completo)
-    with open(RESULTADOS / "dedup_headshots.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["ruta_borrada", "sha256", "ruta_conservada"])
-        writer.writeheader()
-        writer.writerows(filas_borrado)
+    filas_completo = _filas_nivel_superior(raiz, piloto_por_hash)
+    conservados, descartados = _deduplicar_filas(filas_completo)
+    _escribir_manifiestos(filas_completo, conservados, descartados, filas_borrado)
 
     for directorio in dirs_by_ref:
         shutil.rmtree(directorio)
@@ -228,50 +311,9 @@ def deduplicar_headshots(raiz: Path = HEADSHOTS, permitir_huerfanos: bool = Fals
     if len(restantes) != len(top):
         raise RuntimeError(f"Quedaron {len(restantes)} archivos top-level, se esperaban {len(top)}")
 
-    grupos: dict[str, list[dict]] = defaultdict(list)
-    for fila in filas_completo:
-        grupos[fila["sha256"]].append(fila)
-
-    conservados, descartados = [], []
-    for digest, filas in grupos.items():
-        filas = sorted(
-            filas,
-            key=lambda x: (-int(x["temporada"]), -(int(x["ancho"]) * int(x["alto"])), x["archivo"]),
-        )
-        conservados.append(filas[0])
-        for fila in filas[1:]:
-            descartados.append(
-                {
-                    "ruta_conservada": filas[0]["archivo"],
-                    "ruta_descartada": fila["archivo"],
-                    "sha256": digest,
-                    "temporada_conservada": filas[0]["temporada"],
-                    "temporada_descartada": fila["temporada"],
-                }
-            )
-
-    conservados.sort(key=lambda x: x["archivo"])
-    descartados.sort(key=lambda x: x["ruta_descartada"])
-    with open(PROCESADAS / "f1_manifest.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(conservados[0]))
-        writer.writeheader()
-        writer.writerows(conservados)
-    with open(RESULTADOS / "dedup_hash.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(descartados[0]))
-        writer.writeheader()
-        writer.writerows(descartados)
-
-    por_piloto = {}
-    for fila in sorted(conservados, key=lambda x: (-int(x["temporada"]), x["archivo"])):
-        por_piloto.setdefault(fila["codigo"], fila)
-    with open(PROCESADAS / "f1_manifest_piloto.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(conservados[0]))
-        writer.writeheader()
-        writer.writerows(por_piloto.values())
-
     print(
         f"Dedup F1: {len(filas_borrado)} by_ref borrados, "
-        f"{len(conservados)} imágenes únicas de {len(por_piloto)} pilotos."
+        f"{len(conservados)} imágenes únicas de {len({f['codigo'] for f in conservados})} pilotos."
     )
     return {"borrados": len(filas_borrado), "conservados": len(conservados)}
 
@@ -280,7 +322,7 @@ def deduplicar_headshots(raiz: Path = HEADSHOTS, permitir_huerfanos: bool = Fals
 
 
 def preparar_f1(forzar: bool = False) -> dict:
-    salida_npz = PROCESADAS / "f1_20x20.npz"
+    salida_npz = PROCESADAS / "f1_32x32.npz"
     if salida_npz.exists() and not forzar:
         print("F1: ya existe, se saltea.")
         return {}
@@ -289,7 +331,7 @@ def preparar_f1(forzar: bool = False) -> dict:
     if len(filas) != 158:
         raise RuntimeError(f"Se esperaban 158 imágenes F1, hay {len(filas)}")
 
-    carpeta = PROCESADAS / "f1_20x20"
+    carpeta = PROCESADAS / "f1_32x32"
     carpeta.mkdir(parents=True, exist_ok=True)
     X, y, pilotos, temporadas, archivos, imagenes = [], [], [], [], [], []
     for fila in filas:
@@ -338,7 +380,7 @@ def preparar_f1(forzar: bool = False) -> dict:
 
 
 def preparar_nba(forzar: bool = False) -> dict:
-    salida_npz = PROCESADAS / "nba_20x24.npz"
+    salida_npz = PROCESADAS / "nba_30x36.npz"
     if salida_npz.exists() and not forzar:
         print("NBA: ya existe, se saltea.")
         return {}
@@ -346,7 +388,7 @@ def preparar_nba(forzar: bool = False) -> dict:
     if len(rutas) != 347:
         raise RuntimeError(f"Se esperaban 347 imágenes NBA, hay {len(rutas)}")
 
-    carpeta = PROCESADAS / "nba_20x24"
+    carpeta = PROCESADAS / "nba_30x36"
     carpeta.mkdir(parents=True, exist_ok=True)
     X, y, archivos, imagenes = [], [], [], []
     for ruta in rutas:
@@ -389,7 +431,14 @@ def preparar_nba(forzar: bool = False) -> dict:
 # --- Chino ---
 
 
-def _leer_chino(ruta: Path, por_clase: int = 160) -> tuple[np.ndarray, np.ndarray, list[str]]:
+def _leer_chino(ruta: Path, por_clase: int = POR_CLASE_CHINO) -> tuple[np.ndarray, np.ndarray, list[str]]:
+    """Lee `por_clase` filas por carácter, las baja a 32×32 y las invierte.
+
+    El CSV trae 64×64 con fondo negro (0) y trazo claro (255). Se promedia cada
+    bloque 2×2, se normaliza por el máximo de la imagen (el promedio diluye el
+    trazo) y se invierte: fondo blanco 1.0 y trazo negro 0.0. Sin la inversión
+    los caracteres quedan casi invisibles sobre negro.
+    """
     X, y, clases = [], [], []
     indice: dict[str, int] = {}
     conteo: dict[str, int] = defaultdict(int)
@@ -404,7 +453,11 @@ def _leer_chino(ruta: Path, por_clase: int = 160) -> tuple[np.ndarray, np.ndarra
                 indice[caracter] = len(clases)
                 clases.append(caracter)
             pixeles = np.asarray(fila[:4096], dtype=np.float32).reshape(64, 64)
-            chico = pixeles.reshape(16, 4, 16, 4).mean(axis=(1, 3)) / 255.0
+            chico = pixeles.reshape(32, 2, 32, 2).mean(axis=(1, 3))
+            maximo = float(chico.max())
+            if maximo > 0.0:
+                chico = chico / maximo
+            chico = 1.0 - chico
             X.append(chico.ravel())
             y.append(indice[caracter])
             conteo[caracter] += 1
@@ -416,26 +469,29 @@ def _leer_chino(ruta: Path, por_clase: int = 160) -> tuple[np.ndarray, np.ndarra
 
 
 def preparar_chino(forzar: bool = False, guardar_png: bool = False) -> dict:
-    salida_npz = PROCESADAS / "chino_16x16.npz"
+    salida_npz = PROCESADAS / "chino_32x32.npz"
     if salida_npz.exists() and not forzar:
         print("Chino: ya existe, se saltea.")
         return {}
     X, clases_idx, caracteres = _leer_chino(DATOS / "chineseMNIST.csv")
     rng = np.random.default_rng(SEMILLA_SPLIT)
     split = np.empty(len(X), dtype="<U5")
+    n_val = max(1, int(round(0.1 * POR_CLASE_CHINO)))
+    n_train = POR_CLASE_CHINO - 2 * n_val
     for clase in range(15):
         idx = np.flatnonzero(clases_idx == clase)
         orden = rng.permutation(len(idx))
-        split[idx[orden[:128]]] = "train"
-        split[idx[orden[128:144]]] = "val"
-        split[idx[orden[144:]]] = "test"
+        split[idx[orden[:n_train]]] = "train"
+        split[idx[orden[n_train : n_train + n_val]]] = "val"
+        split[idx[orden[n_train + n_val :]]] = "test"
 
     meta = {
         "dataset": "chino",
-        "resolucion": [16, 16],
+        "resolucion": list(RES_CHINO),
         "fuente": "data/chineseMNIST.csv",
         "semilla_split": SEMILLA_SPLIT,
-        "por_clase": 160,
+        "por_clase": POR_CLASE_CHINO,
+        "invertido": True,
         "clases": caracteres,
         "conteos": {s: int(np.sum(split == s)) for s in ("train", "val", "test")},
     }
@@ -449,17 +505,17 @@ def preparar_chino(forzar: bool = False, guardar_png: bool = False) -> dict:
     )
 
     if guardar_png:
-        carpeta = PROCESADAS / "chino_16x16"
+        carpeta = PROCESADAS / "chino_32x32"
         carpeta.mkdir(parents=True, exist_ok=True)
         for i, vector in enumerate(X):
-            Image.fromarray((vector.reshape(16, 16) * 255).astype(np.uint8)).save(
+            Image.fromarray((vector.reshape(*RES_CHINO) * 255).astype(np.uint8)).save(
                 carpeta / f"chino_{i:04d}.png"
             )
     for clase, _caracter in enumerate(caracteres):
-        idx = np.flatnonzero(clases_idx == clase)[:16]
+        idx = np.flatnonzero(clases_idx == clase)[:8]
         _guardar_contacto(
-            X[idx].reshape(-1, 16, 16),
-            [f"clase {clase}"] * 16,
+            X[idx].reshape(-1, *RES_CHINO),
+            [f"clase {clase}"] * 8,
             RESULTADOS / f"chino_{clase:02d}.png",
             columnas=4,
         )

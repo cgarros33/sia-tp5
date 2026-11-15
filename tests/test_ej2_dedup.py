@@ -94,3 +94,23 @@ def test_dedup_puede_preservar_huerfanos(tmp_path):
     copias = list((tmp_path / "procesadas" / "f1_byref_sin_par").glob("*.png"))
     assert len(copias) == 1
     assert np.asarray(Image.open(copias[0])).mean() == 7
+
+
+def test_dedup_reconstruye_manifiesto_si_falta_y_no_hay_by_ref(tmp_path):
+    preparador = _cargar_preparador()
+    headshots = _configurar(preparador, tmp_path)
+    _fixture(tmp_path)
+    for directorio in headshots.glob("*/by_ref"):
+        shutil.rmtree(directorio)
+
+    resumen = preparador.deduplicar_headshots(headshots)
+
+    assert resumen == {"borrados": 0, "conservados": 3}
+    procesadas = tmp_path / "procesadas"
+    assert len((procesadas / "f1_manifest.csv").read_text().splitlines()) == 4
+    assert len((procesadas / "f1_manifest_completo.csv").read_text().splitlines()) == 7
+    assert "2021/AAA.png" in (procesadas / "f1_manifest.csv").read_text()
+    assert "2020/AAA.png" not in (procesadas / "f1_manifest.csv").read_text()
+    # Sin by_ref no hay archivos borrados, pero sí duplicados top-level descartados.
+    assert len((tmp_path / "resultados" / "dedup_headshots.csv").read_text().splitlines()) == 1
+    assert len((tmp_path / "resultados" / "dedup_hash.csv").read_text().splitlines()) == 4

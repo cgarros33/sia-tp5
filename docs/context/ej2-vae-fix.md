@@ -37,11 +37,10 @@ Archivos:
   viejas quedan como registro y §14 dice qué las reemplaza.
 - `CLAUDE.md` §6: agregar los dos links.
 - `docs/structure.md`: actualizar resoluciones, nombres de `.npz`, `latente_4/` en lugar de
-  `latente_2/`, y la ruta `data/procesadas/` como local y no commiteada.
-- `.gitignore`: agregar `data/procesadas/`. Los procesados no se commitean nunca.
-- `commits.txt`: corregir la línea de `git add` de la fase 3 (sacar `data/procesadas`) y
-  agregar los cuatro bloques de la corrección (`Fase 10` a `Fase 13`, una por cada fase de
-  este plan).
+  `latente_2/`, y la ruta `data/procesadas/`.
+- `commits.txt`: mantener `data/procesadas` en la línea de `git add` de la fase 3 y agregar
+  los procesados nuevos en la fase 11. Agregar los cuatro bloques de la corrección
+  (`Fase 10` a `Fase 13`, una por cada fase de este plan).
 
 Criterio de aceptación: los tres documentos existen, los links resuelven, `ruff` sigue
 verde y no se tocó código todavía.
@@ -54,8 +53,9 @@ verde y no se tocó código todavía.
 - `ej2/datos.py`: `RUTA_DATOS = RAIZ / "data" / "procesadas"`.
 - La carpeta movida `data/banderas/procesadas/` queda fuera de uso; el usuario puede
   borrarla. No se lee ni se escribe ahí.
-- `data/procesadas/` se crea si falta y queda en `.gitignore`. Los `.npz` y PNG procesados
-  son locales; solo se commitean código, tests, figuras y resultados de modelos.
+- `data/procesadas/` se crea si falta y se commitea: los `.npz` y PNG procesados van al repo
+  para que el entrenamiento sea reproducible. Los raw (`data/headshots`,
+  `data/player_images`, `data/chineseMNIST.csv`) no se commitean.
 
 ### 2.2 Resoluciones (reemplaza §1.2–§1.4)
 
@@ -117,7 +117,7 @@ python3 utils/preparar_ej2.py --dataset banderas
 ```
 
 Tiempos esperados: F1 y NBA < 1 min cada uno; chino < 10 s (solo 300 filas del CSV);
-banderas < 1 s. La preparación no se commitea.
+banderas < 1 s. Los `.npz` y PNG procesados se agregan al repo.
 
 ## 3. Fase 3 — Implementación
 
@@ -286,7 +286,7 @@ esta corrección.
 - `00_resumen.png` existe para los cuatro datasets y muestra original/reconstrucción/muestras
   con los nombres pedidos.
 - `python3 check-cicd.py` pasa; `ej1`/`ej1b` no cambian.
-- `data/procesadas/` no aparece en `git status` (ignorado).
+- `data/procesadas/` se agrega al repo con los cuatro datasets y sus PNG.
 
 ## 6. Riesgos
 

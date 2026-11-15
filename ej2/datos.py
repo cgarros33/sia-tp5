@@ -14,9 +14,9 @@ RUTA_DATOS = RAIZ / "data" / "procesadas"
 RUTA_RESULTADOS = RAIZ / "resultados" / "ej2"
 
 ARCHIVOS_IMAGEN = {
-    "f1": "f1_20x20.npz",
-    "nba": "nba_20x24.npz",
-    "chino": "chino_16x16.npz",
+    "f1": "f1_32x32.npz",
+    "nba": "nba_30x36.npz",
+    "chino": "chino_32x32.npz",
 }
 SPLITS = ("train", "val", "test")
 
