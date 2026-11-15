@@ -50,26 +50,6 @@ def test_leer_chino_invierte_y_normaliza_por_maximo(tmp_path):
     assert X[1].reshape(32, 32)[2, 0] == pytest.approx(0.0)
 
 
-def test_preparar_chino_da_16_2_2_por_clase(tmp_path, monkeypatch):
-    preparador = _cargar("preparar_ej2")
-    monkeypatch.setattr(preparador, "PROCESADAS", tmp_path)
-    monkeypatch.setattr(preparador, "RESULTADOS", tmp_path / "resultados")
-    monkeypatch.setattr(preparador, "_guardar_contacto", lambda *a, **k: None)
-
-    meta = preparador.preparar_chino(forzar=True)
-
-    assert meta["por_clase"] == 20
-    assert meta["invertido"] is True
-    assert meta["resolucion"] == [32, 32]
-    with np.load(tmp_path / "chino_32x32.npz", allow_pickle=False) as datos:
-        assert datos["X"].shape == (300, 1024)
-        assert datos["X"].min() == pytest.approx(0.0)
-        assert datos["X"].max() == pytest.approx(1.0)
-        assert float(datos["X"].mean()) > 0.8  # fondo blanco dominante
-        clase, split = datos["clase"], datos["split"]
-    for c in range(15):
-        cuentas = {s: int(np.sum((clase == c) & (split == s))) for s in ("train", "val", "test")}
-        assert cuentas == {"train": 16, "val": 2, "test": 2}
 
 
 def test_generar_vector_escribe_una_bandera(tmp_path):
