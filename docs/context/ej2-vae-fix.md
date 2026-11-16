@@ -301,3 +301,53 @@ esta corrección.
   se monitorea `val_recon` y la paciencia es 200.
 - **Reintentos**: cada nivel cuesta un barrido; el nivel 0 debería alcanzar con la
   normalización corregida. Los niveles 1–3 son el seguro.
+
+## 7. Resultados medidos (fase 4)
+
+Los cuatro barridos aceptaron el **nivel 0**: la normalización `KL/d` más el warm-up
+alcanzaron sin free bits ni reintentos. Todos los ganadores usan el latente 4.
+
+| dataset | latente | capacidad | β | lr | pérdida | activas / k | KL | val_recon | baseline |
+|---|---:|---|---:|---:|---|---:|---:|---:|---:|
+| `nba` | 4 | 256–128 | 0.01 | 0.001 | MSE | 4/4 | 24.88 | 0.0207 | 0.0458 |
+| `f1` | 4 | 256–128 | 0.01 | 0.001 | MSE | 4/4 | 32.15 | 0.0233 | 0.0484 |
+| `chino` | 4 | 128–64 | 0.01 | 0.0003 | MSE | 4/4 | 19.98 | 0.0085 | 0.0086 |
+| `banderas` | 4 | 128–64 | 0.01 | 0.0003 | MSE | 4/4 | 10.13 | 0.0317 | 0.1169 |
+
+Test (media ± desvío sobre 5 semillas; MSE de reconstrucción determinística):
+
+| dataset | final / latente 4 | latente 16 | AE latente 4 | AE latente 16 |
+|---|---:|---:|---:|---:|
+| `nba` | 0.0232 ± 0.0002 | 0.0158 ± 0.0004 | 0.0229 ± 0.0020 | 0.0156 ± 0.0003 |
+| `f1` | 0.0279 ± 0.0004 | 0.0220 ± 0.0005 | 0.0274 ± 0.0014 | 0.0210 ± 0.0004 |
+| `chino` | 0.0062 ± 0.0002 | 0.0064 ± 0.0004 | 0.0060 ± 0.0002 | 0.0051 ± 0.0002 |
+| `banderas` | 0.0340 ± 0.0017 | 0.0103 ± 0.0009 | 0.0328 ± 0.0060 | 0.0002 ± 0.0001 |
+
+Unidades activas en test: 4 en `final`/`latente_4` y 16 en `latente_16` para los cuatro
+datasets. El colapso del posterior quedó resuelto: el KL es de orden 10–60 y las muestras de
+`N(0, I)` producen caras/banderas/gestos, no la imagen media.
+
+### 7.1 Hallazgo de chino
+
+El latente chino está activo (4/4, KL 14 en test) y la grilla decodificada cambia, pero las
+reconstrucciones se ven como manchas grises de bajo contraste. La causa es que el MSE (o BCE)
+promediado por píxel está dominado por el fondo blanco: el trazo ocupa ~1 % de los píxeles y
+la red prefiere el fondo. Un diagnóstico con BCE + sigmoid y latente 16 dio el mismo aspecto
+(MSE 0.0070, KL 96). No es colapso: es un problema de peso por píxel. Las palancas siguientes
+son un loss ponderado por trazo, más capacidad/épocas o binarizar la entrada; no tocar el
+warm-up. Se deja documentado, no se cambia el plan aprobado.
+
+### 7.2 Tiempos y artefactos
+
+- Barridos: NBA 6m52s, F1 10m32s, chino 16m54s, banderas 11s.
+- Finales: NBA 4m17s, F1 3m54s, chino 3m09s, banderas 7s.
+- Figuras: 12s; 33 figuras principales (8 por dataset de imagen, 9 en banderas) y 24 PNG
+  auxiliares de banderas en `resultados/ej2/banderas/figuras/auxiliares/`.
+- Las 20 carpetas de modelos se recargan desde `pesos_semilla_0.npz` y reproducen el
+  `recon_mse` de `test.csv`.
+
+### 7.3 Cierre
+
+- `ej1/`, `ej1b/`, `resultados/ej1/`, `resultados/ej1b/` y `data/font.h` no tienen cambios.
+- `python3 check-cicd.py` pasa con la suite completa.
+- Los resultados anteriores quedaron archivados en `resultados/ej2_old/`.

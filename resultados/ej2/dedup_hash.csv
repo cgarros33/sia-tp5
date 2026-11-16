@@ -1,0 +1,15 @@
+ruta_conservada,ruta_descartada,sha256,temporada_conservada,temporada_descartada
+data/headshots/2020/ALB.png,data/headshots/2019/ALB.png,c0c1b0dbd8489236ff318961495f58d564dcac956bc47fb39004c306d1b85277,2020,2019
+data/headshots/2020/GIO.png,data/headshots/2019/GIO.png,cb38ba8845448cedc059f17b28cc9e8f44a6e621d175d7e4ebaf909d8f07e483,2020,2019
+data/headshots/2020/LEC.png,data/headshots/2019/LEC.png,b00bca33fdc59e7cb2390748ad11860551857b693b5fee2474ea91ea249460b6,2020,2019
+data/headshots/2020/MAG.png,data/headshots/2019/MAG.png,d42d3443889b88e6b6bd05fdd2b3d90bbbe3ed8fe47f06f84aa5a3efcec1edf9,2020,2019
+data/headshots/2020/VER.png,data/headshots/2019/VER.png,71ff637cac5901299ab8ca98cb87dc9a2255534d1d4ec8bc94043aab8d94b763,2020,2019
+data/headshots/2020/VET.png,data/headshots/2019/VET.png,89c21afc215a573c3dcd9d29a37d824ca4a7703bf7737203f6b595da6450a993,2020,2019
+data/headshots/2024/BOT.png,data/headshots/2022/BOT.png,23c3f5919258db55503250611947bdde0fa1dec050d35d47d0659f8acdb4d0ad,2024,2022
+data/headshots/2023/DEV.png,data/headshots/2022/DEV.png,b67051f2a987bded110750c88f2bd5e4ed08bbf1b434d2323d6d47b8d2d42967,2023,2022
+data/headshots/2024/HUL.png,data/headshots/2022/HUL.png,994de313089f1f84606c9e567b7953a9ee279439999719daf32593f4234c88a4,2024,2022
+data/headshots/2024/MAG.png,data/headshots/2022/MAG.png,93cdfd31fb36632c709f1cad5d9d9173368d915012fe1bac4bf8821eac9f0abb,2024,2022
+data/headshots/2024/NOR.png,data/headshots/2022/NOR.png,84fe151e914c05ce2888eaf4c792f306c7c8ee3b3547c20590cd24bb619ee3a1,2024,2022
+data/headshots/2024/PER.png,data/headshots/2022/PER.png,6ffd12f31ee92d79f7302552182777430107a2192e87386aef57fe8f5dc1957a,2024,2022
+data/headshots/2024/ZHO.png,data/headshots/2022/ZHO.png,496309a9018bc7d324da3cbe57518144aa378336176742f41a16fe9c18730732,2024,2022
+data/headshots/2024/DRU.png,data/headshots/2023/DRU.png,6159612b4f033fcdd3c21025424a52c6f3179d57108dbec2b23b5d5a1a0c3088,2024,2023

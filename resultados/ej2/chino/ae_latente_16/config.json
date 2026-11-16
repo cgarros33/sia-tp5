@@ -1,0 +1,26 @@
+{
+  "dataset": "chino",
+  "tipo": "imagen",
+  "d": 1024,
+  "forma": [
+    32,
+    32
+  ],
+  "modelo": "ae",
+  "latente": 16,
+  "capacidad": [
+    128,
+    64
+  ],
+  "beta": 0.01,
+  "free_bits": 0.0,
+  "lr": 0.0003,
+  "perdida": "mse",
+  "batch_size": 64,
+  "epocas": 1000,
+  "paciencia": 200,
+  "calentamiento_epocas": 200,
+  "nivel_anticolapso": 0,
+  "semilla_split": 2026,
+  "escalador": null
+}

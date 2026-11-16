@@ -50,8 +50,6 @@ def test_leer_chino_invierte_y_normaliza_por_maximo(tmp_path):
     assert X[1].reshape(32, 32)[2, 0] == pytest.approx(0.0)
 
 
-
-
 def test_generar_vector_escribe_una_bandera(tmp_path):
     generador = _cargar("generar_banderas")
     vector = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.5]
