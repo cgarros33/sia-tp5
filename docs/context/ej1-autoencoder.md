@@ -246,3 +246,24 @@ En `resultados/ej1/figuras/`, todas generadas por `python -m ej1.graficos` desde
    distancia de cada letra generada a la más parecida del set.
 6. `06_curvas_final.png`: pérdida y peor letra por época de la config final, 5 semillas.
 7. `07_letras_dificiles.png`: en cuántas corridas del barrido quedó mal cada letra.
+
+## Corrección (2026-11-16): modelo entrenado hasta 0 píxeles mal
+
+`final/` corta apenas la peor letra llega a ≤ 1 píxel mal (lo que pide la consigna), así que
+las 5 semillas terminaban con exactamente 1 píxel mal. `ej1.barrido` ahora también entrena la
+misma config hasta **0 píxeles mal** en `final_cero/` (mismo formato que `final/`). `final/`
+no cambia: lo sigue usando el 1b como referencia "AE del 1a".
+
+| Corte | Llegan | Épocas | Peor letra | Píxeles mal por letra |
+|---|---|---|---|---|
+| ≤ 1 píxel (`final/`) | 5/5 | 141 ± 19 (121–163) | 1 | 0,100 ± 0,026 |
+| 0 píxeles (`final_cero/`) | **5/5** | **161 ± 31** (132–207) | **0** | **0** |
+
+Con 20 épocas más de media, la config final aprende las 32 letras sin ningún píxel mal.
+
+Las figuras 4, 5 y 6 pasan a usar `final_cero/` (semilla 0); la 3 sigue comparando `final/`
+con las líneas de base. Cambian los números de "Letras nuevas" de arriba:
+
+- En la grilla de 12 × 12, **76 de 144** letras decodificadas son nuevas (antes 65).
+- Las interpolaciones elegidas son «f» → «DEL», «h» → «DEL» y «d» → «z». Entre «d» y «z», en
+  t = 0,25 sale un glifo a 3 píxeles de la «d» y en t = 0,375 uno a 2 píxeles de la «z».

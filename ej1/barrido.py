@@ -13,6 +13,7 @@ deja fijo para los pasos siguientes. Solo escribe en la carpeta de salida:
     final/                         config final: config.json, corridas.csv,
                                    pesos_semilla_<s>.npz, historia_semilla_<s>.csv,
                                    y pca.npz (proyección PCA, para los gráficos)
+    final_cero/                    lo mismo, entrenado hasta 0 píxeles mal
 
 Si el CSV de un paso ya existe no se vuelve a correr: se lee para elegir, así
 que un barrido cortado se retoma desde el primer paso que falta. Si ese CSV se
@@ -496,6 +497,8 @@ def correr_barrido(
     escribir(f"[final] repetido el paso {repetido['id']}: gana {ganador} (config final: {actual})")
 
     _guardar_final(config, X, etiquetas, semillas, objetivo, salida / "final", escribir)
+    # final/ corta apenas cumple la consigna; final_cero/ sigue hasta 0 píxeles mal.
+    _guardar_final(config, X, etiquetas, semillas, 0, salida / "final_cero", escribir)
     texto = json.dumps(elecciones, indent=2, ensure_ascii=False)
     (salida / "elecciones.json").write_text(texto, encoding="utf-8")
     return json.loads(texto)
