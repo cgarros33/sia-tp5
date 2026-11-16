@@ -40,7 +40,8 @@ Archivos:
   `latente_2/`, y la ruta `data/procesadas/`.
 - `commits.txt`: mantener `data/procesadas` en la línea de `git add` de la fase 3 y agregar
   los procesados nuevos en la fase 11. Agregar los cuatro bloques de la corrección
-  (`Fase 10` a `Fase 13`, una por cada fase de este plan).
+  (`Fase 10` a `Fase 13`, una por cada fase de este plan). **Sin efecto: `commits.txt` no
+  existe en el repo.**
 
 Criterio de aceptación: los tres documentos existen, los links resuelven, `ruff` sigue
 verde y no se tocó código todavía.
@@ -258,7 +259,7 @@ Nuevo `00_resumen.png` por dataset, **primero** en el orden y en la presentació
 6. Regenerar las 33 figuras con `python3 -m ej2.graficos`.
 7. CI completo, tests de `ej1`/`ej1b`, `git status` sin cambios en `ej1/`, `ej1b/`,
    `resultados/ej1/`, `resultados/ej1b/`, `data/font.h`.
-8. Actualizar `ej2-vae-fix.md` con resultados medidos y agregar la fase 13 a `commits.txt`.
+8. Actualizar `ej2-vae-fix.md` con resultados medidos (`commits.txt` no existe; se omite).
 
 Tiempos estimados con 5 workers:
 
@@ -318,14 +319,19 @@ Test (media ± desvío sobre 5 semillas; MSE de reconstrucción determinística)
 
 | dataset | final / latente 4 | latente 16 | AE latente 4 | AE latente 16 |
 |---|---:|---:|---:|---:|
-| `nba` | 0.0232 ± 0.0002 | 0.0158 ± 0.0004 | 0.0229 ± 0.0020 | 0.0156 ± 0.0003 |
-| `f1` | 0.0279 ± 0.0004 | 0.0220 ± 0.0005 | 0.0274 ± 0.0014 | 0.0210 ± 0.0004 |
-| `chino` | 0.0062 ± 0.0002 | 0.0064 ± 0.0004 | 0.0060 ± 0.0002 | 0.0051 ± 0.0002 |
-| `banderas` | 0.0340 ± 0.0017 | 0.0103 ± 0.0009 | 0.0328 ± 0.0060 | 0.0002 ± 0.0001 |
+| `nba` | 0.0232 ± 0.0011 | 0.0158 ± 0.0002 | 0.0229 ± 0.0004 | 0.0156 ± 0.0004 |
+| `f1` | 0.0279 ± 0.0007 | 0.0220 ± 0.0002 | 0.0274 ± 0.0007 | 0.0210 ± 0.0001 |
+| `chino` | 0.0062 ± 0.0000 | 0.0064 ± 0.0002 | 0.0060 ± 0.0001 | 0.0051 ± 0.0001 |
+| `banderas` | 0.0340 ± 0.0006 | 0.0103 ± 0.0020 | 0.0328 ± 0.0010 | 0.0002 ± 0.0001 |
 
 Unidades activas en test: 4 en `final`/`latente_4` y 16 en `latente_16` para los cuatro
 datasets. El colapso del posterior quedó resuelto: el KL es de orden 10–60 y las muestras de
 `N(0, I)` producen caras/banderas/gestos, no la imagen media.
+
+> **Corrección (2026-11-16):** la última frase es falsa para esta corrida: con β = 0,01
+> entre 26 % y 29 % de las muestras de NBA y F1 salían casi negras. Ver §8. Los desvíos de la
+> tabla se corrigieron para que coincidan con los `metricas.json` (archivados en
+> `resultados/ej2_beta001/`; chino sigue en `resultados/ej2/chino/`).
 
 ### 7.1 Hallazgo de chino
 
