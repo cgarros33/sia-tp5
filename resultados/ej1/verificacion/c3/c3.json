@@ -1,0 +1,626 @@
+{
+  "resultado": {
+    "9": {
+      "semillas": 5,
+      "ganador": "32/0.01",
+      "criterio": "actualizaciones",
+      "mejor_por_nivel": {
+        "32": {
+          "ganador": "32/0.01",
+          "criterio": "actualizaciones",
+          "resumen": {
+            "32/0.001": {
+              "corridas": 5,
+              "llegan": 5,
+              "pct_llegan": 100.0,
+              "actualizaciones_media": 548.0,
+              "actualizaciones_desvio": 76.12161322515439,
+              "epocas_media": 548.0,
+              "epocas_desvio": 76.12161322515439,
+              "peor_letra_media": 1.0,
+              "peor_letra_desvio": 0.0,
+              "pixeles_mal_media": 0.10625,
+              "pixeles_mal_desvio": 0.035630482034348064
+            },
+            "32/0.003": {
+              "corridas": 5,
+              "llegan": 5,
+              "pct_llegan": 100.0,
+              "actualizaciones_media": 257.8,
+              "actualizaciones_desvio": 24.468346899617064,
+              "epocas_media": 257.8,
+              "epocas_desvio": 24.468346899617064,
+              "peor_letra_media": 1.0,
+              "peor_letra_desvio": 0.0,
+              "pixeles_mal_media": 0.10625,
+              "pixeles_mal_desvio": 0.05229125165837972
+            },
+            "32/0.01": {
+              "corridas": 5,
+              "llegan": 5,
+              "pct_llegan": 100.0,
+              "actualizaciones_media": 141.4,
+              "actualizaciones_desvio": 19.346834366376324,
+              "epocas_media": 141.4,
+              "epocas_desvio": 19.346834366376324,
+              "peor_letra_media": 1.0,
+              "peor_letra_desvio": 0.0,
+              "pixeles_mal_media": 0.1,
+              "pixeles_mal_desvio": 0.02614562582918986
+            }
+          }
+        },
+        "8": {
+          "ganador": "8/0.003",
+          "criterio": "actualizaciones",
+          "resumen": {
+            "8/0.001": {
+              "corridas": 5,
+              "llegan": 5,
+              "pct_llegan": 100.0,
+              "actualizaciones_media": 1758.4,
+              "actualizaciones_desvio": 139.09996405463232,
+              "epocas_media": 439.6,
+              "epocas_desvio": 34.77499101365808,
+              "peor_letra_media": 1.0,
+              "peor_letra_desvio": 0.0,
+              "pixeles_mal_media": 0.15,
+              "pixeles_mal_desvio": 0.08671523078444755
+            },
+            "8/0.003": {
+              "corridas": 5,
+              "llegan": 5,
+              "pct_llegan": 100.0,
+              "actualizaciones_media": 816.8,
+              "actualizaciones_desvio": 155.00709661173582,
+              "epocas_media": 204.2,
+              "epocas_desvio": 38.751774152933955,
+              "peor_letra_media": 1.0,
+              "peor_letra_desvio": 0.0,
+              "pixeles_mal_media": 0.125,
+              "pixeles_mal_desvio": 0.07967217989988726
+            },
+            "8/0.01": {
+              "corridas": 5,
+              "llegan": 5,
+              "pct_llegan": 100.0,
+              "actualizaciones_media": 848.8,
+              "actualizaciones_desvio": 300.1786134953655,
+              "epocas_media": 212.2,
+              "epocas_desvio": 75.04465337384137,
+              "peor_letra_media": 0.8,
+              "peor_letra_desvio": 0.44721359549995804,
+              "pixeles_mal_media": 0.05,
+              "pixeles_mal_desvio": 0.035630482034348064
+            }
+          }
+        },
+        "4": {
+          "ganador": "4/0.003",
+          "criterio": "actualizaciones",
+          "resumen": {
+            "4/0.001": {
+              "corridas": 5,
+              "llegan": 5,
+              "pct_llegan": 100.0,
+              "actualizaciones_media": 2617.6,
+              "actualizaciones_desvio": 235.78973684195842,
+              "epocas_media": 327.2,
+              "epocas_desvio": 29.473717105244802,
+              "peor_letra_media": 1.0,
+              "peor_letra_desvio": 0.0,
+              "pixeles_mal_media": 0.175,
+              "pixeles_mal_desvio": 0.0978279740156158
+            },
+            "4/0.003": {
+              "corridas": 5,
+              "llegan": 5,
+              "pct_llegan": 100.0,
+              "actualizaciones_media": 1619.2,
+              "actualizaciones_desvio": 333.4954272550075,
+              "epocas_media": 202.4,
+              "epocas_desvio": 41.686928406875936,
+              "peor_letra_media": 1.0,
+              "peor_letra_desvio": 0.0,
+              "pixeles_mal_media": 0.08125,
+              "pixeles_mal_desvio": 0.02795084971874737
+            },
+            "4/0.01": {
+              "corridas": 5,
+              "llegan": 0,
+              "pct_llegan": 0.0,
+              "actualizaciones_media": null,
+              "actualizaciones_desvio": null,
+              "epocas_media": 10000.0,
+              "epocas_desvio": 0.0,
+              "peor_letra_media": 30.2,
+              "peor_letra_desvio": 2.0493901531919194,
+              "pixeles_mal_media": 11.2625,
+              "pixeles_mal_desvio": 0.24165768661476505
+            }
+          }
+        },
+        "1": {
+          "ganador": "1/0.001",
+          "criterio": "llegan",
+          "resumen": {
+            "1/0.001": {
+              "corridas": 5,
+              "llegan": 5,
+              "pct_llegan": 100.0,
+              "actualizaciones_media": 6393.6,
+              "actualizaciones_desvio": 763.7884523871777,
+              "epocas_media": 199.8,
+              "epocas_desvio": 23.868389137099303,
+              "peor_letra_media": 1.0,
+              "peor_letra_desvio": 0.0,
+              "pixeles_mal_media": 0.1375,
+              "pixeles_mal_desvio": 0.06480137922914912
+            },
+            "1/0.003": {
+              "corridas": 5,
+              "llegan": 3,
+              "pct_llegan": 60.0,
+              "actualizaciones_media": 6453.333333333333,
+              "actualizaciones_desvio": 2756.894871650592,
+              "epocas_media": 745.8,
+              "epocas_desvio": 747.5715350386208,
+              "peor_letra_media": 7.4,
+              "peor_letra_desvio": 8.792041856133308,
+              "pixeles_mal_media": 1.13125,
+              "pixeles_mal_desvio": 1.6532106546807637
+            },
+            "1/0.01": {
+              "corridas": 5,
+              "llegan": 0,
+              "pct_llegan": 0.0,
+              "actualizaciones_media": null,
+              "actualizaciones_desvio": null,
+              "epocas_media": 1562.0,
+              "epocas_desvio": 0.0,
+              "peor_letra_media": 25.0,
+              "peor_letra_desvio": 3.082207001484488,
+              "pixeles_mal_media": 11.93125,
+              "pixeles_mal_desvio": 0.6652654545367586
+            }
+          }
+        }
+      },
+      "resumen": {
+        "32/0.001": {
+          "corridas": 5,
+          "llegan": 5,
+          "pct_llegan": 100.0,
+          "actualizaciones_media": 548.0,
+          "actualizaciones_desvio": 76.12161322515439,
+          "epocas_media": 548.0,
+          "epocas_desvio": 76.12161322515439,
+          "peor_letra_media": 1.0,
+          "peor_letra_desvio": 0.0,
+          "pixeles_mal_media": 0.10625,
+          "pixeles_mal_desvio": 0.035630482034348064
+        },
+        "32/0.003": {
+          "corridas": 5,
+          "llegan": 5,
+          "pct_llegan": 100.0,
+          "actualizaciones_media": 257.8,
+          "actualizaciones_desvio": 24.468346899617064,
+          "epocas_media": 257.8,
+          "epocas_desvio": 24.468346899617064,
+          "peor_letra_media": 1.0,
+          "peor_letra_desvio": 0.0,
+          "pixeles_mal_media": 0.10625,
+          "pixeles_mal_desvio": 0.05229125165837972
+        },
+        "32/0.01": {
+          "corridas": 5,
+          "llegan": 5,
+          "pct_llegan": 100.0,
+          "actualizaciones_media": 141.4,
+          "actualizaciones_desvio": 19.346834366376324,
+          "epocas_media": 141.4,
+          "epocas_desvio": 19.346834366376324,
+          "peor_letra_media": 1.0,
+          "peor_letra_desvio": 0.0,
+          "pixeles_mal_media": 0.1,
+          "pixeles_mal_desvio": 0.02614562582918986
+        },
+        "8/0.001": {
+          "corridas": 5,
+          "llegan": 5,
+          "pct_llegan": 100.0,
+          "actualizaciones_media": 1758.4,
+          "actualizaciones_desvio": 139.09996405463232,
+          "epocas_media": 439.6,
+          "epocas_desvio": 34.77499101365808,
+          "peor_letra_media": 1.0,
+          "peor_letra_desvio": 0.0,
+          "pixeles_mal_media": 0.15,
+          "pixeles_mal_desvio": 0.08671523078444755
+        },
+        "8/0.003": {
+          "corridas": 5,
+          "llegan": 5,
+          "pct_llegan": 100.0,
+          "actualizaciones_media": 816.8,
+          "actualizaciones_desvio": 155.00709661173582,
+          "epocas_media": 204.2,
+          "epocas_desvio": 38.751774152933955,
+          "peor_letra_media": 1.0,
+          "peor_letra_desvio": 0.0,
+          "pixeles_mal_media": 0.125,
+          "pixeles_mal_desvio": 0.07967217989988726
+        },
+        "8/0.01": {
+          "corridas": 5,
+          "llegan": 5,
+          "pct_llegan": 100.0,
+          "actualizaciones_media": 848.8,
+          "actualizaciones_desvio": 300.1786134953655,
+          "epocas_media": 212.2,
+          "epocas_desvio": 75.04465337384137,
+          "peor_letra_media": 0.8,
+          "peor_letra_desvio": 0.44721359549995804,
+          "pixeles_mal_media": 0.05,
+          "pixeles_mal_desvio": 0.035630482034348064
+        },
+        "4/0.001": {
+          "corridas": 5,
+          "llegan": 5,
+          "pct_llegan": 100.0,
+          "actualizaciones_media": 2617.6,
+          "actualizaciones_desvio": 235.78973684195842,
+          "epocas_media": 327.2,
+          "epocas_desvio": 29.473717105244802,
+          "peor_letra_media": 1.0,
+          "peor_letra_desvio": 0.0,
+          "pixeles_mal_media": 0.175,
+          "pixeles_mal_desvio": 0.0978279740156158
+        },
+        "4/0.003": {
+          "corridas": 5,
+          "llegan": 5,
+          "pct_llegan": 100.0,
+          "actualizaciones_media": 1619.2,
+          "actualizaciones_desvio": 333.4954272550075,
+          "epocas_media": 202.4,
+          "epocas_desvio": 41.686928406875936,
+          "peor_letra_media": 1.0,
+          "peor_letra_desvio": 0.0,
+          "pixeles_mal_media": 0.08125,
+          "pixeles_mal_desvio": 0.02795084971874737
+        },
+        "4/0.01": {
+          "corridas": 5,
+          "llegan": 0,
+          "pct_llegan": 0.0,
+          "actualizaciones_media": null,
+          "actualizaciones_desvio": null,
+          "epocas_media": 10000.0,
+          "epocas_desvio": 0.0,
+          "peor_letra_media": 30.2,
+          "peor_letra_desvio": 2.0493901531919194,
+          "pixeles_mal_media": 11.2625,
+          "pixeles_mal_desvio": 0.24165768661476505
+        },
+        "1/0.001": {
+          "corridas": 5,
+          "llegan": 5,
+          "pct_llegan": 100.0,
+          "actualizaciones_media": 6393.6,
+          "actualizaciones_desvio": 763.7884523871777,
+          "epocas_media": 199.8,
+          "epocas_desvio": 23.868389137099303,
+          "peor_letra_media": 1.0,
+          "peor_letra_desvio": 0.0,
+          "pixeles_mal_media": 0.1375,
+          "pixeles_mal_desvio": 0.06480137922914912
+        },
+        "1/0.003": {
+          "corridas": 5,
+          "llegan": 3,
+          "pct_llegan": 60.0,
+          "actualizaciones_media": 6453.333333333333,
+          "actualizaciones_desvio": 2756.894871650592,
+          "epocas_media": 745.8,
+          "epocas_desvio": 747.5715350386208,
+          "peor_letra_media": 7.4,
+          "peor_letra_desvio": 8.792041856133308,
+          "pixeles_mal_media": 1.13125,
+          "pixeles_mal_desvio": 1.6532106546807637
+        },
+        "1/0.01": {
+          "corridas": 5,
+          "llegan": 0,
+          "pct_llegan": 0.0,
+          "actualizaciones_media": null,
+          "actualizaciones_desvio": null,
+          "epocas_media": 1562.0,
+          "epocas_desvio": 0.0,
+          "peor_letra_media": 25.0,
+          "peor_letra_desvio": 3.082207001484488,
+          "pixeles_mal_media": 11.93125,
+          "pixeles_mal_desvio": 0.6652654545367586
+        }
+      }
+    },
+    "10": {
+      "semillas": 5,
+      "ganador": "bce/0.01",
+      "criterio": "actualizaciones",
+      "mejor_por_nivel": {
+        "bce": {
+          "ganador": "bce/0.01",
+          "criterio": "actualizaciones",
+          "resumen": {
+            "bce/0.003": {
+              "corridas": 5,
+              "llegan": 5,
+              "pct_llegan": 100.0,
+              "actualizaciones_media": 257.8,
+              "actualizaciones_desvio": 24.468346899617064,
+              "epocas_media": 257.8,
+              "epocas_desvio": 24.468346899617064,
+              "peor_letra_media": 1.0,
+              "peor_letra_desvio": 0.0,
+              "pixeles_mal_media": 0.10625,
+              "pixeles_mal_desvio": 0.05229125165837972
+            },
+            "bce/0.01": {
+              "corridas": 5,
+              "llegan": 5,
+              "pct_llegan": 100.0,
+              "actualizaciones_media": 141.4,
+              "actualizaciones_desvio": 19.346834366376324,
+              "epocas_media": 141.4,
+              "epocas_desvio": 19.346834366376324,
+              "peor_letra_media": 1.0,
+              "peor_letra_desvio": 0.0,
+              "pixeles_mal_media": 0.1,
+              "pixeles_mal_desvio": 0.02614562582918986
+            },
+            "bce/0.03": {
+              "corridas": 5,
+              "llegan": 4,
+              "pct_llegan": 80.0,
+              "actualizaciones_media": 331.5,
+              "actualizaciones_desvio": 327.960871649856,
+              "epocas_media": 2265.2,
+              "epocas_desvio": 4333.202880087661,
+              "peor_letra_media": 5.8,
+              "peor_letra_desvio": 10.73312629199899,
+              "pixeles_mal_media": 2.075,
+              "pixeles_mal_desvio": 4.517576351734412
+            },
+            "bce/0.1": {
+              "corridas": 5,
+              "llegan": 0,
+              "pct_llegan": 0.0,
+              "actualizaciones_media": null,
+              "actualizaciones_desvio": null,
+              "epocas_media": 10000.0,
+              "epocas_desvio": 0.0,
+              "peor_letra_media": 29.2,
+              "peor_letra_desvio": 1.7888543819998317,
+              "pixeles_mal_media": 11.65625,
+              "pixeles_mal_desvio": 0.2724311839712921
+            }
+          }
+        },
+        "mse": {
+          "ganador": "mse/0.01",
+          "criterio": "actualizaciones",
+          "resumen": {
+            "mse/0.003": {
+              "corridas": 5,
+              "llegan": 2,
+              "pct_llegan": 40.0,
+              "actualizaciones_media": 509.0,
+              "actualizaciones_desvio": 367.6955262170047,
+              "epocas_media": 6203.6,
+              "epocas_desvio": 5201.6847559228345,
+              "peor_letra_media": 3.0,
+              "peor_letra_desvio": 2.1213203435596424,
+              "pixeles_mal_media": 0.51875,
+              "pixeles_mal_desvio": 0.3176143986817978
+            },
+            "mse/0.01": {
+              "corridas": 5,
+              "llegan": 2,
+              "pct_llegan": 40.0,
+              "actualizaciones_media": 159.5,
+              "actualizaciones_desvio": 38.890872965260115,
+              "epocas_media": 6063.8,
+              "epocas_desvio": 5389.8989044322525,
+              "peor_letra_media": 4.8,
+              "peor_letra_desvio": 3.8987177379235853,
+              "pixeles_mal_media": 1.15625,
+              "pixeles_mal_desvio": 0.7702348464916399
+            },
+            "mse/0.03": {
+              "corridas": 5,
+              "llegan": 0,
+              "pct_llegan": 0.0,
+              "actualizaciones_media": null,
+              "actualizaciones_desvio": null,
+              "epocas_media": 10000.0,
+              "epocas_desvio": 0.0,
+              "peor_letra_media": 26.4,
+              "peor_letra_desvio": 1.51657508881031,
+              "pixeles_mal_media": 11.73125,
+              "pixeles_mal_desvio": 1.276400884812448
+            },
+            "mse/0.1": {
+              "corridas": 5,
+              "llegan": 0,
+              "pct_llegan": 0.0,
+              "actualizaciones_media": null,
+              "actualizaciones_desvio": null,
+              "epocas_media": 10000.0,
+              "epocas_desvio": 0.0,
+              "peor_letra_media": 25.8,
+              "peor_letra_desvio": 3.7013511046643495,
+              "pixeles_mal_media": 13.7875,
+              "pixeles_mal_desvio": 1.3761358944522883
+            }
+          }
+        }
+      },
+      "resumen": {
+        "bce/0.003": {
+          "corridas": 5,
+          "llegan": 5,
+          "pct_llegan": 100.0,
+          "actualizaciones_media": 257.8,
+          "actualizaciones_desvio": 24.468346899617064,
+          "epocas_media": 257.8,
+          "epocas_desvio": 24.468346899617064,
+          "peor_letra_media": 1.0,
+          "peor_letra_desvio": 0.0,
+          "pixeles_mal_media": 0.10625,
+          "pixeles_mal_desvio": 0.05229125165837972
+        },
+        "bce/0.01": {
+          "corridas": 5,
+          "llegan": 5,
+          "pct_llegan": 100.0,
+          "actualizaciones_media": 141.4,
+          "actualizaciones_desvio": 19.346834366376324,
+          "epocas_media": 141.4,
+          "epocas_desvio": 19.346834366376324,
+          "peor_letra_media": 1.0,
+          "peor_letra_desvio": 0.0,
+          "pixeles_mal_media": 0.1,
+          "pixeles_mal_desvio": 0.02614562582918986
+        },
+        "bce/0.03": {
+          "corridas": 5,
+          "llegan": 4,
+          "pct_llegan": 80.0,
+          "actualizaciones_media": 331.5,
+          "actualizaciones_desvio": 327.960871649856,
+          "epocas_media": 2265.2,
+          "epocas_desvio": 4333.202880087661,
+          "peor_letra_media": 5.8,
+          "peor_letra_desvio": 10.73312629199899,
+          "pixeles_mal_media": 2.075,
+          "pixeles_mal_desvio": 4.517576351734412
+        },
+        "bce/0.1": {
+          "corridas": 5,
+          "llegan": 0,
+          "pct_llegan": 0.0,
+          "actualizaciones_media": null,
+          "actualizaciones_desvio": null,
+          "epocas_media": 10000.0,
+          "epocas_desvio": 0.0,
+          "peor_letra_media": 29.2,
+          "peor_letra_desvio": 1.7888543819998317,
+          "pixeles_mal_media": 11.65625,
+          "pixeles_mal_desvio": 0.2724311839712921
+        },
+        "mse/0.003": {
+          "corridas": 5,
+          "llegan": 2,
+          "pct_llegan": 40.0,
+          "actualizaciones_media": 509.0,
+          "actualizaciones_desvio": 367.6955262170047,
+          "epocas_media": 6203.6,
+          "epocas_desvio": 5201.6847559228345,
+          "peor_letra_media": 3.0,
+          "peor_letra_desvio": 2.1213203435596424,
+          "pixeles_mal_media": 0.51875,
+          "pixeles_mal_desvio": 0.3176143986817978
+        },
+        "mse/0.01": {
+          "corridas": 5,
+          "llegan": 2,
+          "pct_llegan": 40.0,
+          "actualizaciones_media": 159.5,
+          "actualizaciones_desvio": 38.890872965260115,
+          "epocas_media": 6063.8,
+          "epocas_desvio": 5389.8989044322525,
+          "peor_letra_media": 4.8,
+          "peor_letra_desvio": 3.8987177379235853,
+          "pixeles_mal_media": 1.15625,
+          "pixeles_mal_desvio": 0.7702348464916399
+        },
+        "mse/0.03": {
+          "corridas": 5,
+          "llegan": 0,
+          "pct_llegan": 0.0,
+          "actualizaciones_media": null,
+          "actualizaciones_desvio": null,
+          "epocas_media": 10000.0,
+          "epocas_desvio": 0.0,
+          "peor_letra_media": 26.4,
+          "peor_letra_desvio": 1.51657508881031,
+          "pixeles_mal_media": 11.73125,
+          "pixeles_mal_desvio": 1.276400884812448
+        },
+        "mse/0.1": {
+          "corridas": 5,
+          "llegan": 0,
+          "pct_llegan": 0.0,
+          "actualizaciones_media": null,
+          "actualizaciones_desvio": null,
+          "epocas_media": 10000.0,
+          "epocas_desvio": 0.0,
+          "peor_letra_media": 25.8,
+          "peor_letra_desvio": 3.7013511046643495,
+          "pixeles_mal_media": 13.7875,
+          "pixeles_mal_desvio": 1.3761358944522883
+        }
+      }
+    }
+  },
+  "conclusion": {
+    "paso_9": {
+      "ganador_original": "32",
+      "mejor_por_lote": {
+        "32": {
+          "ganador": "32/0.01",
+          "llegan": 5,
+          "corridas": 5,
+          "actualizaciones_media": 141.4
+        },
+        "8": {
+          "ganador": "8/0.003",
+          "llegan": 5,
+          "corridas": 5,
+          "actualizaciones_media": 816.8
+        },
+        "4": {
+          "ganador": "4/0.003",
+          "llegan": 5,
+          "corridas": 5,
+          "actualizaciones_media": 1619.2
+        },
+        "1": {
+          "ganador": "1/0.001",
+          "llegan": 5,
+          "corridas": 5,
+          "actualizaciones_media": 6393.6
+        }
+      }
+    },
+    "paso_10": {
+      "ganador_original": "bce",
+      "mejor_por_perdida": {
+        "bce": {
+          "ganador": "bce/0.01",
+          "llegan": 5,
+          "corridas": 5,
+          "actualizaciones_media": 141.4
+        },
+        "mse": {
+          "ganador": "mse/0.01",
+          "llegan": 2,
+          "corridas": 5,
+          "actualizaciones_media": 159.5
+        }
+      }
+    }
+  }
+}

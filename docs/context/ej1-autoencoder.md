@@ -301,3 +301,54 @@ paso y `verificacion.json`); "empata" = llega con el mismo % y a menos de un des
   procesador; el redondeo difiere en el último bit y se amplifica en corridas largas e
   inestables. En una misma máquina cada corrida es determinística (verificado). Las
   conclusiones no cambian: son las mismas con las semillas originales y con las 20.
+
+## Notas para la presentación (2026-11-16)
+
+- **Letra nueva.** En `05a_grilla_latente.png`, el criterio "a ≥ 2 píxeles de todas" también
+  cuenta manchas. Los glifos que se leen como letra son, por ejemplo, la **X** en
+  `(z₁, z₂) = (−2,13; −6,88)` (4 píxeles de la más parecida), la **Z** en `(−1,25; −6,88)`
+  (3 píxeles) y una **a** en `(1,42; −5,17)` (3 píxeles). Conviene mostrar esos y no una
+  mancha. Los huecos del latente del AE sirven de puente al VAE: el VAE llena el espacio con
+  muestras de la prior en vez de interpolar entre códigos.
+- **Empates del barrido.** He y Xavier empatan (265 ± 41 contra 265 ± 47 épocas con 20
+  semillas), y tanh, leaky ReLU y ReLU también (153 ± 35, 162 ± 43 y 176 ± 32). La regla
+  desempató; no son diferencias reales.
+- **Fuente de las figuras.** Las figuras se generaron con la fuente Segoe UI; las 04–06 se
+  regeneraron sin ella. Para una fuente pareja, correr `python3 -m ej1.graficos` en una
+  máquina con Segoe UI (Windows).
+
+## Corrección (2026-11-16): lote y pérdida con su propio lr
+
+El barrido original midió el paso 9 (lote) y el paso 10 (pérdida) con el lr elegido para
+lote completo + BCE, y por eso concluyó que los lotes 4 y 1 no llegaban y que MSE llegaba
+2/5. C3 repite esos dos pasos con la config vigente cuando se eligieron, probando una grilla
+de lr alrededor de cada valor: lote {32, 8, 4, 1} × lr {0,001; 0,003; 0,01} y pérdida
+{BCE, MSE} × lr {0,003; 0,01; 0,03; 0,1}, 5 semillas. Se compara por actualizaciones hasta
+llegar, no por épocas. El lote 1 se corta en 50.000 actualizaciones (1.562 épocas de 32
+lotes). Todo sale de `resultados/ej1/verificacion/c3/`; no se tocaron las elecciones del
+barrido.
+
+### Paso 9: lote, cada uno con su mejor lr
+
+| Lote | Mejor lr | Llegan | Actualizaciones hasta llegar | Peor letra | Píxeles mal |
+|---|---|---|---|---|---|
+| **32** | **0,01** | **5/5** | **141,4 ± 19,3** | 1,00 | 0,100 |
+| 8 | 0,003 | 5/5 | 816,8 ± 155,0 | 1,00 | 0,125 |
+| 4 | 0,003 | 5/5 | 1.619,2 ± 333,5 | 1,00 | 0,081 |
+| 1 | 0,001 | 5/5 | 6.393,6 ± 763,8 | 1,00 | 0,138 |
+
+Con el lr del lote 32 (0,01), los lotes 4 y 1 no llegaban (0/5 cada uno). Con su propio lr,
+los dos llegan 5/5: la conclusión original **no se sostiene**. El lote 1 necesita ~45 veces
+más actualizaciones que el 32, y el 4 ~11 veces más, así que el 32 sigue ganando por la regla
+de actualizaciones y la elección final no cambia.
+
+### Paso 10: pérdida, cada una con su mejor lr
+
+| Pérdida | Mejor lr | Llegan | Actualizaciones hasta llegar | Peor letra | Píxeles mal |
+|---|---|---|---|---|---|
+| **BCE** | **0,01** | **5/5** | **141,4 ± 19,3** | 1,00 | 0,100 |
+| MSE | 0,01 | 2/5 | 159,5 ± 38,9 | 4,80 | 1,156 |
+
+MSE sigue llegando 2/5 con su mejor lr (0,003 también da 2/5, pero en más actualizaciones):
+la conclusión original **se sostiene**. BCE llega 5/5 y con menos actualizaciones, así que la
+elección final tampoco cambia.
