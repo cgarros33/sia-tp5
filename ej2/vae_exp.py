@@ -45,6 +45,8 @@ RAIZ = Path(__file__).resolve().parent.parent
 RUTA_CONFIG = RAIZ / "ej2" / "config.json"
 RUTA_RESULTADOS = RAIZ / "resultados" / "ej2"
 MUESTRAS = 32
+# Pérdida relativa de reconstrucción que se acepta a cambio de un beta más grande.
+TOLERANCIA_BETA = 0.05
 
 # Escalera de reintentos cuando el barrido sigue colapsado. El nivel 0 es el
 # plan base; los siguientes alargan el warm-up, agregan free bits y capacidad.
@@ -308,14 +310,18 @@ def _entrenar(tarea: dict) -> dict:
 
         metricas |= {"kl": kl_epoca, "activas": activas_epoca}
     callbacks = []
+    primera_epoca = 1
     if isinstance(modelo, VariationalAutoencoder):
         callbacks.append(CalentamientoKL(beta, calentamiento))
+        # Durante el warm-up kl_weight < beta: esos pesos no son del objetivo final.
+        primera_epoca = calentamiento + 1
     callbacks.append(
         EarlyStopping(
             patience=int(ds["paciencia"]),
             monitor="val_recon",
             mode="min",
             restore_best=True,
+            start_epoch=primera_epoca,
         )
     )
     inicio = time.perf_counter()
@@ -477,11 +483,16 @@ def _elegir(paso: dict, filas: list[dict], cfg: dict, ds: dict) -> tuple[str, di
     }
 
     if paso["id"].startswith("3"):
-        ganador = min(candidatas, key=lambda e: (recons[e]["media"], e))
+        mejor = min(candidatas, key=lambda e: (recons[e]["media"], e))
+        if colapsado:
+            return mejor, {"motivo": f"{aviso} y, entre esos, la menor reconstrucción", **detalle}
+        # Elegir por reconstrucción sola premia siempre al beta más chico, que deja
+        # el posterior lejos de N(0, I) y arruina las muestras de la prior.
+        limite = recons[mejor]["media"] * (1.0 + TOLERANCIA_BETA)
+        ganador = max((e for e in candidatas if recons[e]["media"] <= limite), key=float)
         motivo = (
-            "menor reconstrucción entre los betas con latente activo y KL > 0.01"
-            if not colapsado
-            else f"{aviso} y, entre esos, la menor reconstrucción"
+            f"mayor beta con latente activo cuya reconstrucción queda a menos de "
+            f"{TOLERANCIA_BETA:.0%} de la mejor"
         )
         return ganador, {"motivo": motivo, **detalle}
 

@@ -128,8 +128,9 @@ el decoder aprende a reconstruir. Después el KL se introduce y poda las dimensi
 aportan. El objetivo final para `t ≥ T` es exactamente el mismo; solo cambia el camino de
 optimización.
 
-El early stopping tiene que monitorear `val_recon`, no `val_loss`, y no debe cortar durante
-el warm-up. Si se monitorea `val_loss`, el KL creciente del warm-up puede parecer un
+El early stopping tiene que monitorear `val_recon`, no `val_loss`, y no debe cortar ni
+elegir la mejor época durante el warm-up: se le pasa `start_epoch = calentamiento + 1`, porque
+los pesos de esas épocas se entrenaron con un β menor al final. Si se monitorea `val_loss`, el KL creciente del warm-up puede parecer un
 empeoramiento y cortar antes de que el modelo use el latente.
 
 ## 6. Free bits

@@ -58,7 +58,9 @@ class EarlyStopping(Callback):
 
     mode="min" para pérdidas, "max" para métricas como accuracy. Una mejora
     tiene que superar min_delta. Con restore_best=True, al terminar la red
-    vuelve a los pesos de la mejor época, haya cortado o no.
+    vuelve a los pesos de la mejor época, haya cortado o no. Las épocas
+    anteriores a start_epoch se ignoran: sirve cuando el objetivo cambia al
+    principio del entrenamiento (p. ej. un warm-up).
     """
 
     def __init__(
@@ -68,16 +70,20 @@ class EarlyStopping(Callback):
         mode: str = "min",
         min_delta: float = 0.0,
         restore_best: bool = True,
+        start_epoch: int = 1,
     ) -> None:
         if patience < 1:
             raise ValueError(f"patience tiene que ser >= 1, llegó {patience}")
         if mode not in ("min", "max"):
             raise ValueError(f"mode tiene que ser 'min' o 'max', llegó {mode!r}")
+        if start_epoch < 1:
+            raise ValueError(f"start_epoch tiene que ser >= 1, llegó {start_epoch}")
         self.patience = patience
         self.monitor = monitor
         self.mode = mode
         self.min_delta = min_delta
         self.restore_best = restore_best
+        self.start_epoch = start_epoch
         self._reset()
 
     def _reset(self) -> None:
@@ -122,6 +128,8 @@ class EarlyStopping(Callback):
                 f"EarlyStopping monitorea {self.monitor!r}, que no está en los logs "
                 f"({sorted(logs)}). ¿Falta pasar validation o metric a fit?"
             )
+        if epoch < self.start_epoch:
+            return False
         value = logs[self.monitor]
         # Con NaN (entrenamiento divergido) ninguna comparación da True: no
         # cuenta como mejora y se termina cortando por paciencia.

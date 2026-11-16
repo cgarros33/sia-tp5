@@ -2,8 +2,8 @@
 
     python -m ej1.graficos [--resultados resultados/ej1]
 
-Solo lee lo que escribió ej1.barrido (CSV de cada paso, elecciones.json y
-final/) y guarda en <resultados>/figuras/. No entrena nada: el autoencoder
+Solo lee lo que escribió ej1.barrido (CSV de cada paso, elecciones.json,
+final/ y final_cero/) y guarda en <resultados>/figuras/. No entrena nada: el autoencoder
 final se reconstruye con los pesos guardados y la proyección PCA viene de
 final/pca.npz.
 """
@@ -623,14 +623,15 @@ def generar_figuras(resultados: Path) -> list[Path]:
         fig = fig_lineas_de_base(base, resumir(final)["final"])
         _guardar(fig, figuras / "03_lineas_de_base_vs_final.png", escritas)
 
-        # 4 y 5. Con la menor semilla de la config final que llegó (o la menor, si ninguna).
+        # 4 a 6 usan la config final entrenada hasta 0 píxeles mal.
+        cero = resultados / "final_cero"
+        final_cero = leer_filas(cero / "corridas.csv")
         semilla = min(
-            (f["semilla"] for f in final if f["llego"]), default=min(f["semilla"] for f in final)
+            (f["semilla"] for f in final_cero if f["llego"]),
+            default=min(f["semilla"] for f in final_cero),
         )
         ae = cargar_modelo(
-            elecciones["config_final"],
-            resultados / "final" / f"pesos_semilla_{semilla}.npz",
-            X.shape[1],
+            elecciones["config_final"], cero / f"pesos_semilla_{semilla}.npz", X.shape[1]
         )
         Z = ae.encode(X)
         with np.load(resultados / "final" / "pca.npz") as pca:
@@ -651,10 +652,8 @@ def generar_figuras(resultados: Path) -> list[Path]:
 
         # 6. Curvas de la config final.
         historias = {
-            f["semilla"]: _leer_historia(
-                resultados / "final" / f"historia_semilla_{f['semilla']}.csv"
-            )
-            for f in final
+            f["semilla"]: _leer_historia(cero / f"historia_semilla_{f['semilla']}.csv")
+            for f in final_cero
         }
         _guardar(fig_curvas(historias), figuras / "06_curvas_final.png", escritas)
 

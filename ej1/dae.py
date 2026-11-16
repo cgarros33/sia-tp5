@@ -245,19 +245,21 @@ def resumir_dae(filas: list[dict], niveles: list[float]) -> dict[str, dict]:
 
 
 def elegir_dae(resumen: dict[str, dict], actual: str | None) -> tuple[str, str]:
-    """Ganador y criterio: "pixeles_mal", "recuperadas" o "empate".
+    """Ganador y criterio: "recuperadas", "pixeles_mal" o "empate".
 
-    1. Menos píxeles mal medios. 2. Si empatan: más letras recuperadas.
+    1. Más letras recuperadas. 2. Si empatan: menos píxeles mal medios.
     3. Si siguen empatados: el valor actual, o el primero de la grilla.
+    Los píxeles mal promediados sobre p los dominan los niveles altos; las
+    recuperadas pesan igual cada nivel y usan el umbral de la consigna.
     """
-    minimo = min(r["pixeles_mal_media"] for r in resumen.values())
-    candidatos = [v for v, r in resumen.items() if r["pixeles_mal_media"] == minimo]
-    if len(candidatos) == 1:
-        return candidatos[0], "pixeles_mal"
-    maximo = max(resumen[v]["recuperadas_media"] for v in candidatos)
-    candidatos = [v for v in candidatos if resumen[v]["recuperadas_media"] == maximo]
+    maximo = max(r["recuperadas_media"] for r in resumen.values())
+    candidatos = [v for v, r in resumen.items() if r["recuperadas_media"] == maximo]
     if len(candidatos) == 1:
         return candidatos[0], "recuperadas"
+    minimo = min(resumen[v]["pixeles_mal_media"] for v in candidatos)
+    candidatos = [v for v in candidatos if resumen[v]["pixeles_mal_media"] == minimo]
+    if len(candidatos) == 1:
+        return candidatos[0], "pixeles_mal"
     return (actual if actual in candidatos else candidatos[0]), "empate"
 
 
@@ -368,8 +370,8 @@ def correr_dae(config_dae: dict, salida: Path, escribir: Callable[[str], None] =
         )
         r = resumen[ganador]
         escribir(
-            f"[{exp['id']}] gana {ganador} ({criterio}): {r['pixeles_mal_media']:.3f} ± "
-            f"{r['pixeles_mal_desvio']:.3f} píxeles mal en validación"
+            f"[{exp['id']}] gana {ganador} ({criterio}): {100 * r['recuperadas_media']:.1f} % "
+            f"recuperadas, {r['pixeles_mal_media']:.3f} píxeles mal en validación"
         )
     elecciones["config_final"] = config
 

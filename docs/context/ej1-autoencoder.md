@@ -246,3 +246,58 @@ En `resultados/ej1/figuras/`, todas generadas por `python -m ej1.graficos` desde
    distancia de cada letra generada a la más parecida del set.
 6. `06_curvas_final.png`: pérdida y peor letra por época de la config final, 5 semillas.
 7. `07_letras_dificiles.png`: en cuántas corridas del barrido quedó mal cada letra.
+
+## Corrección (2026-11-16): modelo entrenado hasta 0 píxeles mal
+
+`final/` corta apenas la peor letra llega a ≤ 1 píxel mal (lo que pide la consigna), así que
+las 5 semillas terminaban con exactamente 1 píxel mal. `ej1.barrido` ahora también entrena la
+misma config hasta **0 píxeles mal** en `final_cero/` (mismo formato que `final/`). `final/`
+no cambia: lo sigue usando el 1b como referencia "AE del 1a".
+
+| Corte | Llegan | Épocas | Peor letra | Píxeles mal por letra |
+|---|---|---|---|---|
+| ≤ 1 píxel (`final/`) | 5/5 | 141 ± 19 (121–163) | 1 | 0,100 ± 0,026 |
+| 0 píxeles (`final_cero/`) | **5/5** | **161 ± 31** (132–207) | **0** | **0** |
+
+Con 20 épocas más de media, la config final aprende las 32 letras sin ningún píxel mal.
+
+Las figuras 4, 5 y 6 pasan a usar `final_cero/` (semilla 0); la 3 sigue comparando `final/`
+con las líneas de base. Cambian los números de "Letras nuevas" de arriba:
+
+- En la grilla de 12 × 12, **76 de 144** letras decodificadas son nuevas (antes 65).
+- Las interpolaciones elegidas son «f» → «DEL», «h» → «DEL» y «d» → «z». Entre «d» y «z», en
+  t = 0,25 sale un glifo a 3 píxeles de la «d» y en t = 0,375 uno a 2 píxeles de la «z».
+
+## Verificación con 20 semillas (2026-11-16)
+
+Dos elecciones del barrido se decidieron por diferencias menores al desvío (He contra Xavier
+por 0,2 épocas; tanh contra leaky ReLU por 2). `python -m ej1.verificacion` repite el paso 5 y
+la repetición final del paso 3 con 20 semillas (0–19), con la config vigente cuando se
+eligieron, sin cambiar ninguna elección. Salida en `resultados/ej1/verificacion/` (un CSV por
+paso y `verificacion.json`); "empata" = llega con el mismo % y a menos de un desvío de las
+épocas del ganador.
+
+| Paso | Valor | Llegan | Épocas hasta ≤ 1 píxel |
+|---|---|---|---|
+| 5 inicialización | **He** (elegido) | 20/20 | 265 ± 41 |
+| | Xavier | 20/20 | 265 ± 47 — empata |
+| | U(±0,1) | 19/20 | 465 ± 86 |
+| | U(±1) | 20/20 | 489 ± 114 |
+| | N(0, 1) | 20/20 | 852 ± 176 |
+| Final, paso 3 | **tanh** (elegido) | 20/20 | 153 ± 35 |
+| | leaky ReLU | 20/20 | 162 ± 43 — empata |
+| | ReLU | 20/20 | 176 ± 32 — empata |
+| | sigmoide | 19/20 | 577 ± 241 |
+
+- **He contra Xavier es un empate**: con 20 semillas dan la misma media. Elegir He fue una
+  decisión de la regla, no una diferencia real. Las inicializaciones sin escalar (U(±1),
+  N(0, 1)) y la muy chica (U(±0,1)) sí son claramente peores.
+- **tanh, leaky ReLU y ReLU empatan**; solo la sigmoide queda claramente atrás. Que gane tanh
+  es la regla desempatando, no un hallazgo.
+- **Reproducibilidad entre máquinas:** las semillas 0–4 reproducen exactamente las corridas
+  cortas del barrido (Xavier, He, tanh, ReLU, leaky ReLU), pero no todas las largas
+  (N(0, 1), U(±0,1), U(±1), sigmoide: por ejemplo N(0, 1) semilla 1 llega en 1284 épocas acá
+  y en 996 en la máquina del barrido). NumPy usa OpenBLAS con kernels distintos según el
+  procesador; el redondeo difiere en el último bit y se amplifica en corridas largas e
+  inestables. En una misma máquina cada corrida es determinística (verificado). Las
+  conclusiones no cambian: son las mismas con las semillas originales y con las 20.

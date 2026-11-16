@@ -1,0 +1,26 @@
+{
+  "dataset": "f1",
+  "tipo": "imagen",
+  "d": 1024,
+  "forma": [
+    32,
+    32
+  ],
+  "modelo": "vae",
+  "latente": 16,
+  "capacidad": [
+    256,
+    128
+  ],
+  "beta": 0.01,
+  "free_bits": 0.0,
+  "lr": 0.001,
+  "perdida": "mse",
+  "batch_size": 16,
+  "epocas": 1000,
+  "paciencia": 200,
+  "calentamiento_epocas": 200,
+  "nivel_anticolapso": 0,
+  "semilla_split": 2026,
+  "escalador": null
+}

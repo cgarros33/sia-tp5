@@ -144,14 +144,14 @@ def _r(pixeles, recuperadas=0.5):
     return {"pixeles_mal_media": pixeles, "recuperadas_media": recuperadas}
 
 
-def test_elegir_dae_menos_pixeles_mal():
-    resumen = {"a": _r(2.0), "b": _r(1.0), "c": _r(1.5)}
-    assert elegir_dae(resumen, actual="a") == ("b", "pixeles_mal")
-
-
-def test_elegir_dae_empate_desempata_por_recuperadas():
-    resumen = {"a": _r(1.0, 0.6), "b": _r(1.0, 0.8), "c": _r(3.0, 0.9)}
+def test_elegir_dae_mas_recuperadas_aunque_tenga_mas_pixeles_mal():
+    resumen = {"a": _r(2.0, 0.6), "b": _r(3.0, 0.7), "c": _r(1.5, 0.65)}
     assert elegir_dae(resumen, actual="a") == ("b", "recuperadas")
+
+
+def test_elegir_dae_empate_desempata_por_pixeles_mal():
+    resumen = {"a": _r(1.5, 0.8), "b": _r(1.0, 0.8), "c": _r(0.5, 0.6)}
+    assert elegir_dae(resumen, actual="a") == ("b", "pixeles_mal")
 
 
 def test_elegir_dae_empate_total_actual_o_primero():

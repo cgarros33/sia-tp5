@@ -40,7 +40,8 @@ Archivos:
   `latente_2/`, y la ruta `data/procesadas/`.
 - `commits.txt`: mantener `data/procesadas` en la línea de `git add` de la fase 3 y agregar
   los procesados nuevos en la fase 11. Agregar los cuatro bloques de la corrección
-  (`Fase 10` a `Fase 13`, una por cada fase de este plan).
+  (`Fase 10` a `Fase 13`, una por cada fase de este plan). **Sin efecto: `commits.txt` no
+  existe en el repo.**
 
 Criterio de aceptación: los tres documentos existen, los links resuelven, `ruff` sigue
 verde y no se tocó código todavía.
@@ -258,7 +259,7 @@ Nuevo `00_resumen.png` por dataset, **primero** en el orden y en la presentació
 6. Regenerar las 33 figuras con `python3 -m ej2.graficos`.
 7. CI completo, tests de `ej1`/`ej1b`, `git status` sin cambios en `ej1/`, `ej1b/`,
    `resultados/ej1/`, `resultados/ej1b/`, `data/font.h`.
-8. Actualizar `ej2-vae-fix.md` con resultados medidos y agregar la fase 13 a `commits.txt`.
+8. Actualizar `ej2-vae-fix.md` con resultados medidos (`commits.txt` no existe; se omite).
 
 Tiempos estimados con 5 workers:
 
@@ -318,14 +319,19 @@ Test (media ± desvío sobre 5 semillas; MSE de reconstrucción determinística)
 
 | dataset | final / latente 4 | latente 16 | AE latente 4 | AE latente 16 |
 |---|---:|---:|---:|---:|
-| `nba` | 0.0232 ± 0.0002 | 0.0158 ± 0.0004 | 0.0229 ± 0.0020 | 0.0156 ± 0.0003 |
-| `f1` | 0.0279 ± 0.0004 | 0.0220 ± 0.0005 | 0.0274 ± 0.0014 | 0.0210 ± 0.0004 |
-| `chino` | 0.0062 ± 0.0002 | 0.0064 ± 0.0004 | 0.0060 ± 0.0002 | 0.0051 ± 0.0002 |
-| `banderas` | 0.0340 ± 0.0017 | 0.0103 ± 0.0009 | 0.0328 ± 0.0060 | 0.0002 ± 0.0001 |
+| `nba` | 0.0232 ± 0.0011 | 0.0158 ± 0.0002 | 0.0229 ± 0.0004 | 0.0156 ± 0.0004 |
+| `f1` | 0.0279 ± 0.0007 | 0.0220 ± 0.0002 | 0.0274 ± 0.0007 | 0.0210 ± 0.0001 |
+| `chino` | 0.0062 ± 0.0000 | 0.0064 ± 0.0002 | 0.0060 ± 0.0001 | 0.0051 ± 0.0001 |
+| `banderas` | 0.0340 ± 0.0006 | 0.0103 ± 0.0020 | 0.0328 ± 0.0010 | 0.0002 ± 0.0001 |
 
 Unidades activas en test: 4 en `final`/`latente_4` y 16 en `latente_16` para los cuatro
 datasets. El colapso del posterior quedó resuelto: el KL es de orden 10–60 y las muestras de
 `N(0, I)` producen caras/banderas/gestos, no la imagen media.
+
+> **Corrección (2026-11-16):** la última frase es falsa para esta corrida: con β = 0,01
+> entre 26 % y 29 % de las muestras de NBA y F1 salían casi negras. Ver §8. Los desvíos de la
+> tabla se corrigieron para que coincidan con los `metricas.json` (archivados en
+> `resultados/ej2_beta001/`; chino sigue en `resultados/ej2/chino/`).
 
 ### 7.1 Hallazgo de chino
 
@@ -351,3 +357,102 @@ warm-up. Se deja documentado, no se cambia el plan aprobado.
 - `ej1/`, `ej1b/`, `resultados/ej1/`, `resultados/ej1b/` y `data/font.h` no tienen cambios.
 - `python3 check-cicd.py` pasa con la suite completa.
 - Los resultados anteriores quedaron archivados en `resultados/ej2_old/`.
+
+## 8. Segunda corrección (2026-11-16): generación
+
+Reemplaza la regla de β de §3.4 y el corte de §3.2. Los resultados de §7 (β = 0,01) quedan
+archivados en `resultados/ej2_beta001/` para comparar; chino no se volvió a correr.
+
+### 8.1 Diagnóstico
+
+Con β = 0,01 las muestras de `N(0, I)` salían negras u oscuras (NBA: ~8 de 32 totalmente
+negras), al revés de lo que afirmaba §7. Dos causas:
+
+- **Regla de β.** Elegir por menor reconstrucción premia siempre al β más chico: los cuatro
+  datasets eligieron 0,01, el borde de la grilla. Con ese β el posterior agregado queda lejos
+  de la prior (NBA: KL 26, medias de μ de hasta 3,4), así que z ~ N(0, I) cae fuera de donde
+  están los datos y el decoder extrapola a valores negativos.
+- **Corte durante el warm-up.** `EarlyStopping` contaba desde la época 1, cuando
+  `kl_weight < β`. Si el mejor `val_recon` caía en el warm-up, se restauraban pesos que nunca
+  se entrenaron con el β final (F1 `latente_16`: mejor época 164–212 con warm-up de 200;
+  banderas con β ≥ 1 en el barrido: mejor época ~15–35 con warm-up de 80).
+
+Sonda con una semilla (latente 4, 400 épocas, corte ya corregido):
+
+| dataset | β | val_recon | KL | muestras casi negras |
+|---|---:|---:|---:|---:|
+| NBA | 0,01 | 0,0205 | 23,6 | 38 % |
+| NBA | 0,1 | 0,0208 | 12,5 | 26 % |
+| NBA | 1 | 0,0209 | 5,7 | 0 % |
+| F1 | 0,01 | 0,0231 | 32,1 | 33 % |
+| F1 | 0,1 | 0,0235 | 12,9 | 10 % |
+| F1 | 1 | 0,0230 | 5,1 | 0 % |
+| banderas | 0,01 | 0,0383 | 10,3 | — |
+| banderas | 0,1 | 0,0361 | 3,2 | — |
+| banderas | 1 | 0,1090 | 0,06 | — (colapsa) |
+
+### 8.2 Cambios
+
+- `core/callbacks.EarlyStopping(start_epoch=1)`: ignora las épocas anteriores, tanto para el
+  mejor valor como para la paciencia. El VAE del ej. 2 le pasa `calentamiento + 1`.
+- Paso 3 del barrido: entre los β con latente activo (`activas ≥ k/2`, `KL > 0,01`) gana el
+  **mayor β cuya `val_recon` media queda a ≤ 5 % de la mejor** (`TOLERANCIA_BETA`). Se acepta
+  perder hasta 5 % de reconstrucción a cambio de un posterior más cercano a la prior. No se usa
+  la regla de 1 desvío de los otros pasos porque el desvío entre semillas de `val_recon` es casi
+  nulo (NBA: 0,00009) y dejaría afuera a un β que reconstruye 1 % peor. Si el paso está
+  colapsado no cambia: gana la menor reconstrucción.
+
+### 8.3 Resultados medidos (2026-11-16)
+
+Barrido y finales de `nba`, `f1` y `banderas` con los dos cambios (~46 min con 5 workers).
+Los tres aceptan el nivel 0 sin reintentos. Cambian β (0,01 → 1 en NBA y F1, 0,01 → 0,1 en
+banderas) y, en banderas, capacidad (256-128) y lr (0,003); latente 4 se mantiene.
+
+Test, MSE de reconstrucción determinística (media ± desvío sobre 5 semillas) y fracción de
+muestras de `N(0, I)` casi negras (brillo medio < 0,05):
+
+| dataset | β | final / latente 4 | latente 16 | AE latente 4 | AE latente 16 | negras VAE 4 (antes → ahora) |
+|---|---:|---:|---:|---:|---:|---:|
+| `nba` | 1,0 | 0,0227 ± 0,0004 | 0,0195 ± 0,0003 | 0,0229 ± 0,0004 | 0,0156 ± 0,0004 | 29 % → 0 % |
+| `f1` | 1,0 | 0,0273 ± 0,0007 | 0,0263 ± 0,0004 | 0,0274 ± 0,0007 | 0,0210 ± 0,0001 | 26 % → 0 % |
+| `banderas` | 0,1 | 0,0385 ± 0,0037 | 0,0313 ± 0,0047 | 0,0325 ± 0,0014 | 0,0001 ± 0,0000 | — → — |
+
+- **Generación:** en NBA y F1 ninguna muestra sale negra y el latente queda centrado (máximo
+  |media de μ| 0,30 y 0,41, antes 3,56 y 3,36). Las figuras `00_resumen.png` y
+  `05_generacion.png` muestran caras y banderas plausibles.
+- **Reconstrucción del latente 4:** igual o mejor que con β = 0,01 en NBA (0,0232 → 0,0227)
+  y F1 (0,0279 → 0,0273); peor en banderas (0,0340 → 0,0385).
+- **Latente 16 empeora** (NBA 0,0158 → 0,0195; banderas 0,0103 → 0,0313): β más alto apaga
+  dimensiones (F1: 7,6 de 16 activas). En banderas, además, el 0,0103 anterior venía en
+  parte de pesos del warm-up: con latente 16 el mínimo de `val_recon` durante el warm-up es
+  0,008–0,010 y después 0,015–0,021.
+- **Corte:** en todos los VAE la mejor época cae después del warm-up (época ≥ 201).
+- Chino no se volvió a correr: sus resultados de §7 siguen en `resultados/ej2/chino/`.
+
+### 8.4 AE contra VAE y métrica de generación
+
+`nn_dist` no distinguía una cara de un cuadro negro y se medía sobre la salida sin recortar.
+`ej2/graficos.py` calcula ahora, desde los `muestras_semilla_<s>.npz` guardados (sin
+reentrenar), `figuras/metricas_generacion.csv`: % de valores fuera de [0, 1], % de muestras
+casi negras (brillo medio < 0,05, solo imágenes), brillo medio contra el de train y distancia
+al vecino de train con la muestra recortada. Media sobre 5 semillas, latente 4:
+
+| dataset | modelo | fuera de [0, 1] | casi negras | brillo (train) | vecino de train |
+|---|---|---:|---:|---:|---:|
+| `nba` | VAE | 13 % | 0 % | 0,603 (0,604) | 0,017 |
+| `nba` | AE | 42 % | 31 % | 0,156 (0,604) | 0,093 |
+| `f1` | VAE | 18 % | 0 % | 0,717 (0,722) | 0,016 |
+| `f1` | AE | 38 % | 34 % | 0,203 (0,722) | 0,331 |
+| `banderas` | VAE | 13 % | — | 0,455 (0,449) | 0,032 |
+| `banderas` | AE | 52 % | — | 0,357 (0,449) | 0,070 |
+
+Figuras nuevas:
+
+- `09_ae_vs_vae_muestras.png`: el mismo z ~ N(0, I) por el decoder del AE y del VAE. Es la
+  evidencia de 2b/2c: el AE genera cuadros oscuros y el VAE caras, pilotos y banderas.
+- `10_distribucion_latente.png`: histograma de μ de train por dimensión contra N(0, 1). En
+  NBA el AE tiene medias de −5,1 y −3,4; el VAE queda en |media| ≤ 0,3 y σ ≈ 1. Explica por
+  qué muestrear la prior funciona en uno y no en el otro.
+- `11_interpolacion.png`: interpolación entre dos códigos de test. En NBA el AE y el VAE se
+  ven parecidos: entre dos puntos de datos los dos latentes son continuos. La diferencia está
+  lejos de los datos, que es adonde cae z ~ N(0, I) en el AE.

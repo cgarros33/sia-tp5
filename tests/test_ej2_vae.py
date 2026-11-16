@@ -148,6 +148,32 @@ def test_elegir_marca_colapso_si_todos_los_latentes_estan_muertos():
     assert detalle["colapsado"] is True
 
 
+def _filas_beta(valores):
+    return [
+        _fila_barrrido(valor, semilla, 0.5, recon, activas, 1.0)
+        for valor, recon, activas in valores
+        for semilla in range(2)
+    ]
+
+
+def test_elegir_beta_prefiere_el_mayor_dentro_de_la_tolerancia_de_reconstruccion():
+    paso = {"id": "3_beta", "valores": [0.01, 0.1, 1.0, 5.0]}
+    filas = _filas_beta(
+        [("0.01", 0.0200, 4), ("0.1", 0.0205, 4), ("1.0", 0.0208, 4), ("5.0", 0.0250, 4)]
+    )
+    ganador, detalle = _elegir(paso, filas, {"latente": 4}, {"perdidas": ["mse"]})
+    # 0.0208 está a 4 % del mejor (0.0200); 0.0250 queda afuera.
+    assert ganador == "1.0"
+    assert detalle["colapsado"] is False
+
+
+def test_elegir_beta_no_elige_uno_colapsado_aunque_reconstruya_igual():
+    paso = {"id": "3_beta", "valores": [0.01, 0.1, 1.0]}
+    filas = _filas_beta([("0.01", 0.0200, 4), ("0.1", 0.0205, 4), ("1.0", 0.0205, 0)])
+    ganador, _detalle = _elegir(paso, filas, {"latente": 4}, {"perdidas": ["mse"]})
+    assert ganador == "0.1"
+
+
 def test_aplicar_nivel_cambia_beta_free_bits_y_epocas():
     from ej2.vae_exp import _leer_config
 

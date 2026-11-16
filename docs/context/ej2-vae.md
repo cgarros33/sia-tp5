@@ -534,7 +534,7 @@ config.json                 config efectiva + semilla_split + versión del spec
 pesos_semilla_<s>.npz       params del encoder y decoder
 historia_semilla_<s>.csv    epoch, train_loss, val_loss, kl, unidades_activas
 test.csv                    una fila por semilla con las métricas de test
-muestras.npz                z, muestras generadas, reconstrucciones determinísticas
+muestras_semilla_<s>.npz    z, muestras generadas, reconstrucciones determinísticas
 ```
 
 El test se evalúa una sola vez por semilla, con los pesos restaurados del mejor `val_loss`.
@@ -549,7 +549,7 @@ Todas se reportan como media ± desvío sobre semillas.
 - `pixeles_mal`: fracción de píxeles con `|x − x'| > 0.5` (para chino, binarizar ambos a 0,5).
 - `kl_medio`: `kl_divergence(X_test)`.
 - `unidades_activas`: sobre `X_test`.
-- `nn_dist`: distancia euclídea media de cada muestra generada `N(0,I)` a su imagen de train
+- `nn_dist`: MSE media de cada muestra generada `N(0,I)` a su imagen de train
   más cercana. Sirve para detectar muestras degeneradas o copias.
 - Figuras: grillas de muestras y de reconstrucciones.
 

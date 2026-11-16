@@ -242,6 +242,12 @@ def test_barrido_mini_escribe_todo_y_se_puede_retomar(tmp_path, monkeypatch):
     pca = np.load(final / "pca.npz")
     assert pca["Z"].shape == (32, 2)
 
+    # La misma config entrenada hasta 0 píxeles mal, aparte, para las figuras.
+    cero = salida / "final_cero"
+    assert json.loads((cero / "config.json").read_text(encoding="utf-8")) == esperada
+    for fila in leer_filas(cero / "corridas.csv"):
+        assert fila["llego"] == (fila["peor_letra"] == 0)
+
     # Retomar: con todo escrito no se entrena nada y las elecciones salen iguales.
     def no_entrenar(*args, **kwargs):
         raise AssertionError("no tendría que entrenar")
