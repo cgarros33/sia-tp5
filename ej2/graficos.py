@@ -482,20 +482,33 @@ def fig_dataset(nombre: str) -> Figure:
 # --- 2. Reconstrucción ---
 
 
+def _indices_reconstruccion(nombre: str, conjunto: dict, split: str) -> np.ndarray:
+    """Primeros 8 del split; en NBA, LeBron primero y el resto igual."""
+    indices = list(np.flatnonzero(conjunto["split"] == split)[:MUESTRAS_FILA])
+    if nombre == "nba":
+        lebron = int(np.flatnonzero(conjunto["y"] == "lebron")[0])
+        indices = [lebron] + [i for i in indices if i != lebron]
+    return np.asarray(indices)
+
+
 def fig_reconstruccion(nombre: str) -> Figure:
     conjunto = _dataset(nombre)
     modelo, _ = _modelo(nombre, "final")
     filas = []
     for split in ("train", "test"):
-        idx = np.flatnonzero(conjunto["split"] == split)[:MUESTRAS_FILA]
+        idx = _indices_reconstruccion(nombre, conjunto, split)
         originales = conjunto["X"][idx]
         reconstruccion = modelo.decode(modelo.encode(originales))
         filas.append((f"{split}: originales", _imagenes(conjunto, originales)))
         filas.append((f"{split}: reconstrucción", _imagenes(conjunto, reconstruccion)))
-    fig = Figure(figsize=(9, 0.5 + _alto_fila(conjunto) * len(filas)), layout="constrained")
+    columnas = len(filas[0][1])
+    fig = Figure(
+        figsize=(1.15 * columnas, 0.5 + _alto_fila(conjunto) * len(filas)),
+        layout="constrained",
+    )
     ejes = fig.subplots(len(filas), 1)
     for ax, (titulo, imagenes) in zip(np.atleast_1d(ejes), filas, strict=True):
-        _mostrar_mosaico(ax, imagenes, MUESTRAS_FILA, titulo)
+        _mostrar_mosaico(ax, imagenes, columnas, titulo)
     return fig
 
 

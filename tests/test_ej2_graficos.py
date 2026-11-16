@@ -73,3 +73,22 @@ def test_render_auxiliar_de_banderas_usa_el_generador(tmp_path):
     assert imagenes[0].shape == (160, 240, 3)
     assert imagenes[0].min() >= 0.0 and imagenes[0].max() <= 1.0
     assert (tmp_path / "prueba_00.png").exists()
+
+
+def test_reconstruccion_nba_pone_lebron_primero():
+    conjunto = {
+        "split": np.array(["train"] * 4 + ["test"] * 3),
+        "y": np.array(["a", "b", "lebron", "c", "d", "e", "f"]),
+    }
+    indices = graficos._indices_reconstruccion("nba", conjunto, "train")
+    assert indices[0] == 2
+    assert len(indices) == 4
+
+
+def test_reconstruccion_otro_dataset_no_cambia_el_orden():
+    conjunto = {
+        "split": np.array(["train"] * 3 + ["test"] * 2),
+        "y": np.array(["a", "b", "c", "d", "e"]),
+    }
+    indices = graficos._indices_reconstruccion("f1", conjunto, "test")
+    np.testing.assert_array_equal(indices, [3, 4])
