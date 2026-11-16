@@ -16,5 +16,5 @@
   "l2": 0.0,
   "max_epocas": 10000,
   "paciencia": 500,
-  "ruido": 0.2
+  "ruido": 0.1
 }

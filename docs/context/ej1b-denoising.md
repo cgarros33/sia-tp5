@@ -306,3 +306,35 @@ validación.
   llega una «|» con p ≤ 0,2. En el latente 2 (figura 5), sus códigos casi coinciden.
 - **Latente 2 (figura 5):** las letras ruidosas quedan, en su mayoría, cerca del código de su
   letra limpia. Las que saltan lejos caen cerca de otra letra, y esos saltos son los errores.
+
+## Corrección (2026-11-16): elegir por letras recuperadas
+
+Reemplaza la regla de "Cómo se elige en A y en B". Los resultados de arriba (p_train = 0,2)
+quedan archivados en `resultados/ej1b/final_p02/` (final, figuras y `elecciones.json`).
+
+**Por qué.** El promedio de píxeles mal sobre los p de validación lo dominan los niveles
+altos: con p = 0,3 hay ~8 píxeles mal y con p = 0,05 menos de 1. Eso favorecía al p_train
+alto (0,2), que deja de copiar bien las letras limpias (92 % recuperadas sin ruido). El % de
+letras recuperadas pesa igual cada nivel y usa el umbral de la consigna (≤ 1 píxel mal).
+
+**Regla nueva** (en A y en B, sobre validación): 1. más % de letras recuperadas promediado
+sobre p > 0; 2. si empatan, menos píxeles mal; 3. si siguen empatados, el valor actual o el
+primero de la grilla. Con los CSV ya guardados (no se reentrenó A ni B):
+
+- A: sigue ganando el latente 8 (68,7 % contra 68,1 % del 16).
+- B: gana **p_train = 0,1** (68,7 %) en lugar de 0,2 (66,0 %); mixto queda 65,4 %.
+
+**Resultado en test** (píxeles mal por letra · % recuperadas; media sobre 5 semillas):
+
+| Modelo | p = 0 | 0,05 | 0,1 | 0,2 | 0,3 |
+|---|---|---|---|---|---|
+| DAE p_train = 0,2 (antes) | 0,28 · 92 % | 0,36 · 91 % | 0,72 · 85 % | 2,99 · 59 % | 7,40 · 28 % |
+| **DAE p_train = 0,1** | **0,03 · 99 %** | **0,13 · 97 %** | **0,57 · 90 %** | 3,55 · 59 % | 8,58 · 25 % |
+| Vecino más cercano (techo) | 0,00 · 100 % | 0,01 · 100 % | 0,12 · 98 % | 1,43 · 85 % | 5,88 · 51 % |
+| No hacer nada | 0,00 · 100 % | 1,74 · 48 % | 3,50 · 11 % | 7,14 · 0 % | 10,58 · 0 % |
+
+- Con p ≤ 0,1 el DAE nuevo casi alcanza al techo y ya no rompe las letras limpias (99 %
+  recuperadas; antes 92 %). En la figura 4, la «|» limpia ahora sale bien.
+- Con p = 0,3 recupera menos (25 % contra 28 %) y deja más píxeles mal: es el costo de
+  entrenar con menos ruido. Con p = 0,2 las recuperadas no cambian (59 %).
+- La brecha con el techo en ruido alto sigue abierta; es lo que estudia el experimento C.

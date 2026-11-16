@@ -124,7 +124,7 @@
       "nombre": "latente",
       "valor_anterior": "2",
       "ganador": "8",
-      "criterio": "pixeles_mal",
+      "criterio": "recuperadas",
       "resumen": {
         "2": {
           "corridas": 5,
@@ -196,8 +196,8 @@
       "id": "B",
       "nombre": "ruido",
       "valor_anterior": "0.1",
-      "ganador": "0.2",
-      "criterio": "pixeles_mal",
+      "ganador": "0.1",
+      "criterio": "recuperadas",
       "resumen": {
         "0": {
           "corridas": 5,
@@ -284,7 +284,7 @@
         "l2": 0.0,
         "max_epocas": 10000,
         "paciencia": 500,
-        "ruido": 0.2
+        "ruido": 0.1
       }
     }
   ],
@@ -306,6 +306,6 @@
     "l2": 0.0,
     "max_epocas": 10000,
     "paciencia": 500,
-    "ruido": 0.2
+    "ruido": 0.1
   }
 }
