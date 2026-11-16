@@ -463,7 +463,10 @@ def fig_resumen(nombre: str) -> Figure:
             ha="center",
             fontsize=8,
         )
-    fig.suptitle(f"{nombre}: original, reconstrucción y muestras de N(0, I)")
+    fig.suptitle(
+        f"{nombre}: original, reconstrucción y muestras de N(0, I)\n"
+        "las muestras no corresponden a las etiquetas de la fila original"
+    )
     return fig
 
 

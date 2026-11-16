@@ -27,6 +27,10 @@ ya tiene `final_cero/` (0 píxeles mal) y la verificación con 20 semillas. Deta
 
 ## 1. Decidir qué pasa con el dataset chino (ej. 2) — decisión del equipo
 
+> **Resuelto (2026-11-16):** se intentó la opción B con 100 imágenes por clase,
+> binarización y BCE, pero la reconstrucción quedó en 0,87 × la imagen media (se exigía
+> < 0,8). Chino queda fuera de la entrega. Detalle en `ej2-vae-fix.md` §10.
+
 **Problema.** No aprende: la reconstrucción de validación (0,0085) es igual a devolver la
 imagen media (0,00856), y las reconstrucciones son la misma mancha gris para las 15 clases.
 Se pasó de 2400 a 300 imágenes en 32×32. Además sus resultados son de la regla de β vieja

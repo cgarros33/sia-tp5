@@ -53,7 +53,7 @@
       "batch_size": 64,
       "semillas_barrido": 5,
       "epocas_barrido": 300,
-      "perdidas": ["mse"],
+      "perdidas": ["binary_crossentropy"],
       "max_epocas": 1000,
       "paciencia": 200,
       "semillas_final": 5,

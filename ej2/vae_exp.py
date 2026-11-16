@@ -47,6 +47,8 @@ RUTA_RESULTADOS = RAIZ / "resultados" / "ej2"
 MUESTRAS = 32
 # Pérdida relativa de reconstrucción que se acepta a cambio de un beta más grande.
 TOLERANCIA_BETA = 0.05
+# reconstrucción que tiene que lograr el nivel para aceptarse, relativa a la imagen media.
+UMBRAL_BASELINE = 0.8
 
 # Escalera de reintentos cuando el barrido sigue colapsado. El nivel 0 es el
 # plan base; los siguientes alargan el warm-up, agregan free bits y capacidad.
@@ -556,25 +558,37 @@ def _evaluar_nivel(nombre: str, ds: dict, cfg_final: dict, filas: list[dict]) ->
     kl = float(np.mean([float(f["kl_medio"]) for f in filas]))
     recon = float(np.mean([float(f["val_recon"]) for f in filas]))
     k = int(cfg_final["latente"])
-    cumple = activas >= 0.5 * k and kl > 0.01 and recon < baseline
+    cumple = activas >= 0.5 * k and kl > 0.01 and recon < UMBRAL_BASELINE * baseline
     return cumple, {
         "unidades_activas": activas,
         "kl_medio": kl,
         "val_recon": recon,
         "baseline": baseline,
+        "ratio_baseline": recon / baseline if baseline else None,
+        "umbral_baseline": UMBRAL_BASELINE,
         "latente": k,
     }
+
+
+def _valores_perdida(paso: dict, ds: dict) -> tuple[list[str], bool]:
+    """Valores de pérdida a correr y si el paso se saltea porque el dataset tiene una sola."""
+    if len(ds["perdidas"]) == 1:
+        return [ds["perdidas"][0]], True
+    return [v for v in paso["valores"] if v in ds["perdidas"]], False
 
 
 def correr_barrido(nombre: str, trabajadores: int, forzar: bool, nivel: int = 0) -> dict:
     base_cfg = _leer_config()
     cfg_general, ds = _aplicar_nivel(base_cfg, base_cfg["datasets"][nombre], nivel)
+    perdida_inicial = cfg_general["base"]["perdida"]
+    if perdida_inicial not in ds["perdidas"]:
+        perdida_inicial = ds["perdidas"][0]
     actual = {
         "latente": cfg_general["base"]["latente"],
         "capacidad": cfg_general["base"]["capacidad"],
         "beta": cfg_general["base"]["beta"],
         "lr": cfg_general["base"]["lr"],
-        "perdida": cfg_general["base"]["perdida"],
+        "perdida": perdida_inicial,
         "free_bits": cfg_general["free_bits"],
         "calentamiento_frac": cfg_general["calentamiento_frac"],
         "nivel_anticolapso": nivel,
@@ -592,8 +606,8 @@ def correr_barrido(nombre: str, trabajadores: int, forzar: bool, nivel: int = 0)
     for paso in cfg_general["pasos"]:
         valores = paso["valores"]
         if paso["id"].startswith("5"):
-            valores = [v for v in valores if v in ds["perdidas"]]
-            if len(valores) == 1:
+            valores, saltar = _valores_perdida(paso, ds)
+            if saltar:
                 actual["perdida"] = valores[0]
                 elecciones.append(
                     {
@@ -674,11 +688,12 @@ def correr_barrido(nombre: str, trabajadores: int, forzar: bool, nivel: int = 0)
         validacion=validacion,
     )
     print(
-        f"{nombre}: nivel {nivel} {'aceptado' if aceptado else 'sigue colapsado'} "
+        f"{nombre}: nivel {nivel} {'aceptado' if aceptado else 'no aceptado'} "
         f"(activas={validacion.get('unidades_activas', 0):.2f}, "
         f"KL={validacion.get('kl_medio', 0):.4f}, "
         f"recon={validacion.get('val_recon', 0):.4f} vs base "
-        f"{validacion.get('baseline', 0):.4f})"
+        f"{validacion.get('baseline', 0):.4f}, "
+        f"{validacion.get('ratio_baseline', 0):.2f}× base)"
     )
     return {
         "config_final": actual,
