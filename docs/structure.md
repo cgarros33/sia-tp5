@@ -21,6 +21,7 @@ ej1/                   Exercise 1a: basic autoencoder on font.h (spec: docs/cont
   datos.py             cargar_font(): X (32, 35) in {0, 1} and the 32 labels
   config.json          Sweep: base config, baselines, per-step grids, seeds, max epochs
   barrido.py           Sequential sweep; writes only to resultados/ej1/
+  verificacion.py      Re-runs chosen 1a steps with more seeds; writes resultados/ej1/verificacion/
   graficos.py          Figures; reads only from resultados/ej1/, writes resultados/ej1/figuras/
   config_dae.json      1b: base config, noise levels, noisy val/test seeds, experiment grids
   dae.py               1b experiments; writes only to resultados/ej1b/

@@ -1,0 +1,149 @@
+{
+  "5": {
+    "semillas": 20,
+    "ganador_original": "he",
+    "empatan_con_el_ganador": [
+      "xavier",
+      "he"
+    ],
+    "resumen": {
+      "U(±0.1)": {
+        "corridas": 20,
+        "llegan": 19,
+        "pct_llegan": 95.0,
+        "epocas_media": 465.36842105263156,
+        "epocas_desvio": 86.34569443445585,
+        "peor_letra_media": 1.65,
+        "peor_letra_desvio": 2.9068883707497273,
+        "pixeles_mal_media": 0.2671875,
+        "pixeles_mal_desvio": 0.7345919332446811,
+        "segundos_media": 0.5155318077002449,
+        "actualizaciones_media": 942.1,
+        "divergidas": 0
+      },
+      "U(±1)": {
+        "corridas": 20,
+        "llegan": 20,
+        "pct_llegan": 100.0,
+        "epocas_media": 488.7,
+        "epocas_desvio": 113.59304092843198,
+        "peor_letra_media": 1.0,
+        "peor_letra_desvio": 0.0,
+        "pixeles_mal_media": 0.0734375,
+        "pixeles_mal_desvio": 0.0383068355690703,
+        "segundos_media": 0.2671284262007248,
+        "actualizaciones_media": 488.7,
+        "divergidas": 0
+      },
+      "N(0,1)": {
+        "corridas": 20,
+        "llegan": 20,
+        "pct_llegan": 100.0,
+        "epocas_media": 851.75,
+        "epocas_desvio": 175.5106459509088,
+        "peor_letra_media": 1.0,
+        "peor_letra_desvio": 0.0,
+        "pixeles_mal_media": 0.0859375,
+        "pixeles_mal_desvio": 0.07510614747247987,
+        "segundos_media": 0.4785674761991686,
+        "actualizaciones_media": 851.75,
+        "divergidas": 0
+      },
+      "xavier": {
+        "corridas": 20,
+        "llegan": 20,
+        "pct_llegan": 100.0,
+        "epocas_media": 265.0,
+        "epocas_desvio": 47.07440918375928,
+        "peor_letra_media": 1.0,
+        "peor_letra_desvio": 0.0,
+        "pixeles_mal_media": 0.084375,
+        "pixeles_mal_desvio": 0.04977333491359658,
+        "segundos_media": 0.1499764142492495,
+        "actualizaciones_media": 265.0,
+        "divergidas": 0
+      },
+      "he": {
+        "corridas": 20,
+        "llegan": 20,
+        "pct_llegan": 100.0,
+        "epocas_media": 264.55,
+        "epocas_desvio": 41.20612499182743,
+        "peor_letra_media": 1.0,
+        "peor_letra_desvio": 0.0,
+        "pixeles_mal_media": 0.115625,
+        "pixeles_mal_desvio": 0.06499936740582861,
+        "segundos_media": 0.14670221104970552,
+        "actualizaciones_media": 264.55,
+        "divergidas": 0
+      }
+    }
+  },
+  "final": {
+    "semillas": 20,
+    "ganador_original": "tanh",
+    "empatan_con_el_ganador": [
+      "tanh",
+      "relu",
+      "leaky relu"
+    ],
+    "resumen": {
+      "tanh": {
+        "corridas": 20,
+        "llegan": 20,
+        "pct_llegan": 100.0,
+        "epocas_media": 153.25,
+        "epocas_desvio": 35.14612354157995,
+        "peor_letra_media": 1.0,
+        "peor_letra_desvio": 0.0,
+        "pixeles_mal_media": 0.09375,
+        "pixeles_mal_desvio": 0.048624162825968695,
+        "segundos_media": 0.08419448230160924,
+        "actualizaciones_media": 153.25,
+        "divergidas": 0
+      },
+      "sigmoide": {
+        "corridas": 20,
+        "llegan": 19,
+        "pct_llegan": 95.0,
+        "epocas_media": 577.0,
+        "epocas_desvio": 240.7095991254007,
+        "peor_letra_media": 1.3,
+        "peor_letra_desvio": 1.341640786499874,
+        "pixeles_mal_media": 0.115625,
+        "pixeles_mal_desvio": 0.10734727523323542,
+        "segundos_media": 0.6609256545496465,
+        "actualizaciones_media": 1048.15,
+        "divergidas": 0
+      },
+      "relu": {
+        "corridas": 20,
+        "llegan": 20,
+        "pct_llegan": 100.0,
+        "epocas_media": 175.5,
+        "epocas_desvio": 31.827660925679098,
+        "peor_letra_media": 1.0,
+        "peor_letra_desvio": 0.0,
+        "pixeles_mal_media": 0.1015625,
+        "pixeles_mal_desvio": 0.0544815199837233,
+        "segundos_media": 0.07465079949979554,
+        "actualizaciones_media": 175.5,
+        "divergidas": 0
+      },
+      "leaky relu": {
+        "corridas": 20,
+        "llegan": 20,
+        "pct_llegan": 100.0,
+        "epocas_media": 161.8,
+        "epocas_desvio": 43.1125821175455,
+        "peor_letra_media": 1.0,
+        "peor_letra_desvio": 0.0,
+        "pixeles_mal_media": 0.103125,
+        "pixeles_mal_desvio": 0.05654164161785635,
+        "segundos_media": 0.07768950954996398,
+        "actualizaciones_media": 161.8,
+        "divergidas": 0
+      }
+    }
+  }
+}

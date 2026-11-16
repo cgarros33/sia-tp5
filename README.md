@@ -27,6 +27,7 @@ resultados ya están en el repo, así que los gráficos se pueden regenerar sin 
 ```bash
 python3 -m ej1.barrido     # barrido secuencial, ~45 min; retoma los pasos que ya existen
 python3 -m ej1.graficos    # figuras en resultados/ej1/figuras/
+python3 -m ej1.verificacion  # pasos 5 y final con 20 semillas, ~1 min
 ```
 
 ### 1b — Denoising autoencoder
