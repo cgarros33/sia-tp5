@@ -40,6 +40,7 @@ resultados/ej1/        Sweep output: one CSV per step, elecciones.json, final/ (
 resultados/ej1b/       1b output: one CSV per experiment, elecciones.json, final/ (weights, test.csv)
 resultados/ej2/        VAE output: dedup manifests, sweep CSVs, final/ and latent_4/16 (weights, figures)
 resultados/ej2_old/    Pre-correction VAE output, archived for comparison
+resultados/ej2_beta001/  nba, f1 and banderas with the old beta rule (beta = 0.01), archived for comparison
 utils/                 Standalone data scripts (excluded from ruff)
 docs/context/          Assignment, course notes and exercise specs (source of truth)
 check-cicd.py          Local CI: creates .venv, installs requirements, runs all checks

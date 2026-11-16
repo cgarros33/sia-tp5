@@ -298,6 +298,20 @@ def test_early_stopping_corta_si_diverge():
     assert stopper.best_epoch == 1
 
 
+def test_early_stopping_ignora_las_epocas_anteriores_a_start_epoch():
+    stopper = EarlyStopping(patience=2, start_epoch=3)
+    X, y = linear_data(10)
+    net = linear_net()
+    history = net.fit(X, y, GD(), MSE(), epochs=10,
+                      callbacks=[FakeLosses([0.1, 0.2, 0.5, 0.4, 0.6, 0.7]), stopper])  # fmt: skip
+
+    # La época 1 es la mejor, pero no cuenta: ni como mejor ni para la paciencia.
+    assert stopper.best_epoch == 4
+    assert len(history) == 6
+    for p in net.params:
+        np.testing.assert_array_equal(p, 4.0)
+
+
 def test_early_stopping_sin_validacion_falla_con_mensaje_claro():
     X, y = linear_data(10)
     with pytest.raises(ValueError, match="val_loss"):
@@ -305,7 +319,9 @@ def test_early_stopping_sin_validacion_falla_con_mensaje_claro():
 
 
 @pytest.mark.parametrize(
-    "kwargs", [{"patience": 0}, {"patience": 2, "mode": "maximo"}], ids=["patience", "mode"]
+    "kwargs",
+    [{"patience": 0}, {"patience": 2, "mode": "maximo"}, {"patience": 2, "start_epoch": 0}],
+    ids=["patience", "mode", "start_epoch"],
 )
 def test_early_stopping_parametros_invalidos(kwargs):
     with pytest.raises(ValueError):

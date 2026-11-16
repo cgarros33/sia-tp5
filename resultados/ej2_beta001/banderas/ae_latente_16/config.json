@@ -1,0 +1,55 @@
+{
+  "dataset": "banderas",
+  "tipo": "tabular",
+  "d": 12,
+  "forma": [
+    1,
+    12
+  ],
+  "modelo": "ae",
+  "latente": 16,
+  "capacidad": [
+    128,
+    64
+  ],
+  "beta": 0.01,
+  "free_bits": 0.0,
+  "lr": 0.0003,
+  "perdida": "mse",
+  "batch_size": 32,
+  "epocas": 1000,
+  "paciencia": 200,
+  "calentamiento_epocas": 200,
+  "nivel_anticolapso": 0,
+  "semilla_split": 2026,
+  "escalador": {
+    "minimo": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.6669999957084656,
+      1.166700005531311
+    ],
+    "rango": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      2.3330000042915344,
+      0.833299994468689
+    ]
+  }
+}

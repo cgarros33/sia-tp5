@@ -9,12 +9,12 @@
   "modelo": "vae",
   "latente": 16,
   "capacidad": [
-    128,
-    64
+    256,
+    128
   ],
-  "beta": 0.01,
+  "beta": 0.1,
   "free_bits": 0.0,
-  "lr": 0.0003,
+  "lr": 0.003,
   "perdida": "mse",
   "batch_size": 32,
   "epocas": 1000,
