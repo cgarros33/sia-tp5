@@ -422,3 +422,31 @@ muestras de `N(0, I)` casi negras (brillo medio < 0,05):
   0,008–0,010 y después 0,015–0,021.
 - **Corte:** en todos los VAE la mejor época cae después del warm-up (época ≥ 201).
 - Chino no se volvió a correr: sus resultados de §7 siguen en `resultados/ej2/chino/`.
+
+### 8.4 AE contra VAE y métrica de generación
+
+`nn_dist` no distinguía una cara de un cuadro negro y se medía sobre la salida sin recortar.
+`ej2/graficos.py` calcula ahora, desde los `muestras_semilla_<s>.npz` guardados (sin
+reentrenar), `figuras/metricas_generacion.csv`: % de valores fuera de [0, 1], % de muestras
+casi negras (brillo medio < 0,05, solo imágenes), brillo medio contra el de train y distancia
+al vecino de train con la muestra recortada. Media sobre 5 semillas, latente 4:
+
+| dataset | modelo | fuera de [0, 1] | casi negras | brillo (train) | vecino de train |
+|---|---|---:|---:|---:|---:|
+| `nba` | VAE | 13 % | 0 % | 0,603 (0,604) | 0,017 |
+| `nba` | AE | 42 % | 31 % | 0,156 (0,604) | 0,093 |
+| `f1` | VAE | 18 % | 0 % | 0,717 (0,722) | 0,016 |
+| `f1` | AE | 38 % | 34 % | 0,203 (0,722) | 0,331 |
+| `banderas` | VAE | 13 % | — | 0,455 (0,449) | 0,032 |
+| `banderas` | AE | 52 % | — | 0,357 (0,449) | 0,070 |
+
+Figuras nuevas:
+
+- `09_ae_vs_vae_muestras.png`: el mismo z ~ N(0, I) por el decoder del AE y del VAE. Es la
+  evidencia de 2b/2c: el AE genera cuadros oscuros y el VAE caras, pilotos y banderas.
+- `10_distribucion_latente.png`: histograma de μ de train por dimensión contra N(0, 1). En
+  NBA el AE tiene medias de −5,1 y −3,4; el VAE queda en |media| ≤ 0,3 y σ ≈ 1. Explica por
+  qué muestrear la prior funciona en uno y no en el otro.
+- `11_interpolacion.png`: interpolación entre dos códigos de test. En NBA el AE y el VAE se
+  ven parecidos: entre dos puntos de datos los dos latentes son continuos. La diferencia está
+  lejos de los datos, que es adonde cae z ~ N(0, I) en el AE.

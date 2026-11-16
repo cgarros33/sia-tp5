@@ -92,3 +92,33 @@ def test_reconstruccion_otro_dataset_no_cambia_el_orden():
     }
     indices = graficos._indices_reconstruccion("f1", conjunto, "test")
     np.testing.assert_array_equal(indices, [3, 4])
+
+
+def test_metricas_generacion_detecta_muestras_negras_y_fuera_de_rango():
+    train = np.array([[0.2, 0.4, 0.6, 0.8], [0.5, 0.5, 0.5, 0.5]])
+    generadas = np.array([[0.2, 0.4, 0.6, 0.8], [-1.0, -0.5, 0.0, 0.01]])
+    m = graficos.metricas_generacion(generadas, train, imagen=True)
+    assert m["casi_negras"] == pytest.approx(0.5)
+    assert m["fuera_de_rango"] == pytest.approx(2 / 8)
+    assert m["brillo"] == pytest.approx((0.5 + 0.0025) / 2)
+    assert m["brillo_train"] == pytest.approx(0.5)
+    # La primera muestra es una fila de train; la segunda se compara ya recortada.
+    recortada = np.array([0.0, 0.0, 0.0, 0.01])
+    esperado = (0.0 + np.mean((train - recortada) ** 2, axis=1).min()) / 2
+    assert m["nn_dist"] == pytest.approx(esperado)
+
+
+def test_metricas_generacion_tabular_no_cuenta_negras():
+    train = np.zeros((3, 12))
+    m = graficos.metricas_generacion(np.full((2, 12), 0.5), train, imagen=False)
+    assert np.isnan(m["casi_negras"])
+    assert m["fuera_de_rango"] == 0.0
+
+
+def test_interpolar_incluye_los_extremos():
+    za, zb = np.array([0.0, 2.0]), np.array([4.0, -2.0])
+    z = graficos._interpolar(za, zb, pasos=5)
+    assert z.shape == (5, 2)
+    np.testing.assert_allclose(z[0], za)
+    np.testing.assert_allclose(z[-1], zb)
+    np.testing.assert_allclose(z[2], [2.0, 0.0])

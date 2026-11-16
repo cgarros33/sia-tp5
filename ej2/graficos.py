@@ -17,6 +17,10 @@ Salidas en resultados/ej2/<dataset>/figuras/:
     06_curvas.png               pérdidas, KL y unidades activas por época
     07_latente_4_vs_16.png      reconstrucciones y muestras lado a lado
     08_banderas_decodificadas.png  solo banderas
+    09_ae_vs_vae_muestras.png   el mismo z ~ N(0, I) por el decoder del AE y del VAE
+    10_distribucion_latente.png códigos de train por dimensión contra N(0, 1)
+    11_interpolacion.png        interpolación entre dos códigos, AE y VAE
+    metricas_generacion.csv     calidad de las muestras de N(0, I), por modelo
 
 Las banderas del resumen se renderizan con utils/generar_banderas.py en
 figuras/auxiliares/, para que originales, reconstrucciones y muestras usen la
@@ -694,6 +698,134 @@ def fig_banderas(nombre: str) -> Figure:
     return fig
 
 
+# --- 9 a 11. AE contra VAE ---
+
+PASOS_INTERPOLACION = 9
+UMBRAL_NEGRA = 0.05
+CARPETAS_GENERACION = ("latente_4", "ae_latente_4", "latente_16", "ae_latente_16")
+
+
+def metricas_generacion(generadas: np.ndarray, X_train: np.ndarray, imagen: bool) -> dict:
+    """Calidad de muestras de N(0, I): rango, muestras negras, brillo y vecino de train."""
+    recortadas = np.clip(generadas, 0.0, 1.0)
+    distancias = [np.mean((X_train - fila) ** 2, axis=1).min() for fila in recortadas]
+    negras = np.mean(recortadas.mean(axis=1) < UMBRAL_NEGRA) if imagen else np.nan
+    return {
+        "fuera_de_rango": float(np.mean((generadas < 0.0) | (generadas > 1.0))),
+        "casi_negras": float(negras),
+        "brillo": float(recortadas.mean()),
+        "brillo_train": float(X_train.mean()),
+        "nn_dist": float(np.mean(distancias)),
+    }
+
+
+def _interpolar(za: np.ndarray, zb: np.ndarray, pasos: int) -> np.ndarray:
+    t = np.linspace(0.0, 1.0, pasos)[:, None]
+    return (1.0 - t) * za + t * zb
+
+
+def _x_modelo(conjunto: dict, split: str) -> np.ndarray:
+    """X de un split en el espacio en que entrena el modelo (banderas, escaladas)."""
+    X = conjunto["X"][conjunto["split"] == split]
+    if conjunto["tipo"] == "tabular":
+        return datos.aplicar_escalador(X, conjunto["escalador"])
+    return X
+
+
+def tabla_generacion(nombre: str) -> list[dict]:
+    conjunto = _dataset(nombre)
+    train = _x_modelo(conjunto, "train")
+    filas = []
+    for sub in CARPETAS_GENERACION:
+        por_semilla = [
+            metricas_generacion(
+                np.load(ruta)["generadas"], train, imagen=conjunto["tipo"] == "imagen"
+            )
+            for ruta in sorted(_carpeta(nombre, sub).glob("muestras_semilla_*.npz"))
+        ]
+        fila = {"modelo": sub, "semillas": len(por_semilla)}
+        for clave in por_semilla[0]:
+            valores = np.array([m[clave] for m in por_semilla])
+            fila[f"{clave}_media"] = float(valores.mean())
+            fila[f"{clave}_desvio"] = float(valores.std(ddof=1)) if len(valores) > 1 else 0.0
+        filas.append(fila)
+    return filas
+
+
+def _resumen_generacion(fila: dict, imagen: bool) -> str:
+    texto = f"fuera de [0, 1]: {100 * fila['fuera_de_rango_media']:.0f} %"
+    if imagen:
+        texto = f"casi negras: {100 * fila['casi_negras_media']:.0f} % · " + texto
+    return texto
+
+
+def fig_ae_vs_vae_muestras(nombre: str) -> Figure:
+    conjunto = _dataset(nombre)
+    ae, _ = _modelo(nombre, "ae_latente_4")
+    vae, _ = _modelo(nombre, "latente_4")
+    z = np.random.default_rng(0).standard_normal((MUESTRAS_FILA, vae.latent_dim))
+    tabla = {f["modelo"]: f for f in tabla_generacion(nombre)}
+    imagen = conjunto["tipo"] == "imagen"
+    fig = Figure(figsize=(9, 0.6 + _alto_fila(conjunto) * 2), layout="constrained")
+    fig.suptitle(f"{nombre}: el mismo z ~ N(0, I) por el decoder del AE y del VAE (latente 4)")
+    for ax, (titulo, modelo, sub) in zip(
+        fig.subplots(2, 1),
+        (("AE", ae, "ae_latente_4"), ("VAE", vae, "latente_4")),
+        strict=True,
+    ):
+        texto = f"{titulo} · {_resumen_generacion(tabla[sub], imagen)} (5 semillas)"
+        _mostrar_mosaico(ax, _imagenes(conjunto, modelo.decode(z)), MUESTRAS_FILA, texto)
+    return fig
+
+
+def fig_distribucion_latente(nombre: str) -> Figure:
+    conjunto = _dataset(nombre)
+    train = _x_modelo(conjunto, "train")
+    modelos = (("AE", _modelo(nombre, "ae_latente_4")[0]), ("VAE", _modelo(nombre, "latente_4")[0]))
+    k = modelos[1][1].latent_dim
+    fig = Figure(figsize=(2.3 * k, 4.6), layout="constrained")
+    fig.suptitle(f"{nombre}: códigos de train por dimensión contra la prior N(0, 1)")
+    ejes = fig.subplots(2, k, squeeze=False)
+    eje_z = np.linspace(-4.0, 4.0, 200)
+    densidad = np.exp(-0.5 * eje_z**2) / np.sqrt(2.0 * np.pi)
+    for fila, (titulo, modelo) in zip(ejes, modelos, strict=True):
+        codigos = modelo.encode(train)
+        for j, ax in enumerate(fila):
+            ax.hist(codigos[:, j], bins=20, density=True, color=SERIES[0], edgecolor=SUPERFICIE)
+            ax.plot(eje_z, densidad, color=SERIES[1], linewidth=1.5)
+            ax.set_title(
+                f"{titulo} z{j + 1}: μ {codigos[:, j].mean():.2f}, σ {codigos[:, j].std():.2f}"
+            )
+            ax.set_yticks([])
+    return fig
+
+
+def fig_interpolacion(nombre: str) -> Figure:
+    conjunto = _dataset(nombre)
+    test = _x_modelo(conjunto, "test")
+    # Extremos: la primera de test y la más distinta a ella.
+    a, b = 0, int(np.argmax(np.mean((test - test[0]) ** 2, axis=1)))
+    fig = Figure(figsize=(9.5, 0.6 + _alto_fila(conjunto) * 2), layout="constrained")
+    fig.suptitle(f"{nombre}: interpolación lineal entre dos códigos de test (latente 4)")
+    for ax, (titulo, sub) in zip(
+        fig.subplots(2, 1), (("AE", "ae_latente_4"), ("VAE", "latente_4")), strict=True
+    ):
+        modelo, _ = _modelo(nombre, sub)
+        z = _interpolar(*modelo.encode(test[[a, b]]), PASOS_INTERPOLACION)
+        _mostrar_mosaico(ax, _imagenes(conjunto, modelo.decode(z)), PASOS_INTERPOLACION, titulo)
+    return fig
+
+
+def _escribir_tabla_generacion(nombre: str) -> Path:
+    filas = tabla_generacion(nombre)
+    ruta = _guardar(None, nombre) / "metricas_generacion.csv"
+    with open(ruta, "w", newline="", encoding="utf-8") as archivo:
+        escritor = csv.DictWriter(archivo, fieldnames=list(filas[0]))
+        escritor.writeheader()
+        escritor.writerows(filas)
+    return ruta
+
+
 FIGURAS = {
     "00_resumen.png": fig_resumen,
     "01_dataset.png": fig_dataset,
@@ -703,6 +835,9 @@ FIGURAS = {
     "05_generacion.png": fig_generacion,
     "06_curvas.png": fig_curvas,
     "07_latente_4_vs_16.png": fig_latente_4_vs_16,
+    "09_ae_vs_vae_muestras.png": fig_ae_vs_vae_muestras,
+    "10_distribucion_latente.png": fig_distribucion_latente,
+    "11_interpolacion.png": fig_interpolacion,
 }
 
 
@@ -721,6 +856,7 @@ def generar(nombre: str) -> list[Path]:
             fig.savefig(ruta)
             rutas.append(ruta)
             print(f"{nombre}: {ruta.relative_to(RAIZ)}")
+    print(f"{nombre}: {_escribir_tabla_generacion(nombre).relative_to(RAIZ)}")
     print(f"{nombre}: figuras en {(RESULTADOS / nombre / 'figuras').resolve()}")
     return rutas
 

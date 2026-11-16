@@ -34,6 +34,10 @@ Los resultados anteriores a la corrección están archivados en `resultados/ej2_
 | `06_curvas.png` | pérdidas, KL y unidades activas por época |
 | `07_latente_4_vs_16.png` | reconstrucciones y muestras de latente 4 vs 16 |
 | `08_banderas_decodificadas.png` | solo banderas: test, reconstrucción y muestras |
+| `09_ae_vs_vae_muestras.png` | el mismo z ~ N(0, I) por el decoder del AE y del VAE |
+| `10_distribucion_latente.png` | μ de train por dimensión contra N(0, 1), AE y VAE |
+| `11_interpolacion.png` | interpolación entre dos códigos de test, AE y VAE |
+| `metricas_generacion.csv` | calidad de las muestras de N(0, I) por modelo (5 semillas) |
 
 En banderas, `figuras/auxiliares/` guarda los PNG que `utils/generar_banderas.py` renderiza
 para `00_resumen.png` (originales, reconstrucciones y muestras con la misma geometría).
