@@ -11,7 +11,8 @@ autoencoder que reciba una letra con ruido y devuelva la letra limpia (consigna,
 
 ## Decisiones del equipo (no se cambian)
 
-- Ruido: solo bit-flip, con p ∈ {0, 0,05, 0,1, 0,2, 0,3} (ver "Ruido").
+- Ruido: solo bit-flip para entrenar, con p ∈ {0, 0,05, 0,1, 0,2, 0,3} (ver "Ruido"). El
+  gaussiano se evalúa sin reentrenar (ver "Evaluación con ruido gaussiano").
 - Arquitectura: se estudia la dimensión del latente, con valores {2, 4, 8, 16} (experimento A).
 - Corte: `EarlyStopping` sobre `val_loss`, con paciencia de 500, `restore_best` y un máximo de
   10.000 épocas.
@@ -53,8 +54,11 @@ ruido se lee directo en píxeles: p · 35 píxeles mal esperados por letra.
 
 Con p = 0,5 la entrada es ruido puro y no tiene información de la letra, así que no se usa.
 
-El ruido gaussiano no se estudia: sobre datos 0/1, recortado a [0, 1] y binarizado, se reduce
-a un bit-flip, y agregarlo duplicaría las corridas sin aportar un fenómeno nuevo.
+El ruido gaussiano no se usa para entrenar, pero **sí se evalúa**: no se binariza la entrada,
+así que el DAE recibe valores continuos y el problema no es el mismo que un bit-flip. El DAE
+se entrenó solo con bit-flip (p ∈ {0; 0,05; 0,1; 0,2; 0,3}) y `ej1/gaussiano.py` mide cuánto
+generaliza a σ ∈ {0; 0,1; 0,2; 0,3; 0,4; 0,5} sin reentrenar. Los resultados están en
+"Evaluación con ruido gaussiano".
 
 **Nivel variable (`mixto`):** a cada letra de cada lote se le sortea su propio
 p ~ U(0; 0,3), y el sorteo se repite en cada época. Tiene sentido porque, con bit-flip, p < 0,5
@@ -149,11 +153,13 @@ En `core/`, genérico y con tests:
 
 En `ej1/`:
 
-- `config_dae.json`: base (la config final del 1a), tipo de ruido, niveles, K, semillas de
-  validación y test, grillas de A y B, y paciencia.
-- `dae.py`: corre A, B y la evaluación final. Solo escribe en `resultados/ej1b/`: un CSV por
-  experimento, `elecciones.json`, y en `final/` los pesos, la historia y `test.csv`. Igual que
-  el barrido del 1a, si el CSV de un experimento ya existe, lo saltea.
+- `config_dae.json`: base (la config final del 1a, más `copias_epoca` y `monitor`), tipo de
+  ruido, niveles, K, semillas de validación y test, grillas de A, B y C, y paciencia.
+- `dae.py`: corre A, B, C y la evaluación final. Solo escribe en `resultados/ej1b/`: un CSV
+  por experimento, `elecciones.json`, y en `final/` los pesos, la historia y `test.csv`. Igual
+  que el barrido del 1a, si el CSV de un experimento ya existe, lo saltea.
+- `gaussiano.py`: evalúa el DAE final con ruido gaussiano, sin reentrenar; escribe
+  `resultados/ej1b/gaussiano/test.csv`.
 - `graficos_dae.py`: solo lee de `resultados/ej1b/` y guarda en `resultados/ej1b/figuras/`.
 
 ## Figuras
@@ -169,6 +175,8 @@ En `ej1/`:
    ruidosas coloreadas por letra de origen y unidas a ella con un segmento, con los códigos de
    las letras limpias encima. Muestra si el encoder agrupa las versiones ruidosas cerca de su
    letra.
+6. Ruido gaussiano: píxeles mal y % de letras recuperadas contra σ, el DAE final contra las
+   tres referencias.
 
 ## Fases
 
@@ -205,11 +213,12 @@ En `ej1/`:
   `referencias_validacion.csv` (nada, vecino y AE del 1a en validación, para la figura 1);
   `elecciones.json`; y `final/` con `config.json`, pesos e historia por semilla, y
   `test.csv` (modelo, semilla, nivel y medidas, para el DAE y las tres referencias). La
-  config final se reentrena con las 5 semillas. Es determinístico: da los mismos pesos que la
-  corrida de B, y el smoke test lo verifica.
+  config final se reentrena con las 5 semillas. Es determinístico: los pesos finales
+  reproducen la corrida del experimento que fijó la config, y el smoke test lo verifica.
 - **Figuras:** se guardan en `resultados/ej1b/figuras/`: `01_latente.png`,
-  `02_ruido_entrenamiento.png`, `03_final_test.png`, `04_ejemplos.png` y
-  `05_latente_dae.png`. Las figuras 4 y 5 usan la menor semilla y las letras de test, que se
+  `02_ruido_entrenamiento.png`, `03_final_test.png`, `04_ejemplos.png`,
+  `05_latente_dae.png` y `06_gaussiano.png` (esta última solo si existe
+  `gaussiano/test.csv`). Las figuras 4 y 5 usan la menor semilla y las letras de test, que se
   regeneran con su semilla fija. La figura 4 usa el DAE final y muestra la primera copia
   ruidosa de «a e g k m s l |» con cada p > 0. La figura 5 usa el latente 2 del experimento A,
   con p = 0,1. Para eso, A tiene `"guardar_pesos": ["2"]` en la config, y `dae.py` guarda esos
@@ -338,3 +347,76 @@ primero de la grilla. Con los CSV ya guardados (no se reentrenó A ni B):
 - Con p = 0,3 recupera menos (25 % contra 28 %) y deja más píxeles mal: es el costo de
   entrenar con menos ruido. Con p = 0,2 las recuperadas no cambian (59 %).
 - La brecha con el techo en ruido alto sigue abierta; es lo que estudia el experimento C.
+
+## Experimento C (2026-11-16): arquitectura y copias por época
+
+Se probaron las ocultas {60-40-20, 128-64, 128-128-64} × `copias_epoca` {1, 8, 16}, con
+latente 8, p_train = 0,1, lote 32 y 5 semillas (45 corridas). Con `copias_epoca = k` cada
+época entrena sobre `np.tile(X, k)`; el bit-flip se sortea de nuevo en cada lote, así que la
+red ve k versiones ruidosas distintas de cada letra por época. Se elige con la misma regla:
+más letras recuperadas y, si empatan, menos píxeles mal. Todo sale de
+`resultados/ej1b/experimento_C_arquitectura_y_copias.csv`.
+
+Letras recuperadas (%) · píxeles mal por letra, media ± desvío sobre 5 semillas:
+
+| Ocultas | k = 1 | k = 8 | k = 16 |
+|---|---|---|---|
+| 60-40-20 | 68,0 ± 0,8 · 3,037 ± 0,122 | **69,6 ± 0,9 · 3,008 ± 0,088** | 68,3 ± 0,7 · 3,093 ± 0,195 |
+| 128-64 | 67,0 ± 1,1 · 2,919 ± 0,098 | 68,2 ± 0,9 · 2,903 ± 0,065 | 68,3 ± 1,0 · 2,965 ± 0,128 |
+| 128-128-64 | 65,8 ± 0,5 · 3,213 ± 0,045 | 65,3 ± 0,7 · 3,252 ± 0,062 | 65,2 ± 1,3 · 3,275 ± 0,134 |
+
+Gana **60-40-20 con k = 8** (69,6 % contra 68,0 % del k = 1), así que la config final cambia
+solo en `copias_epoca`: el resto (latente 8, p_train = 0,1, lote 32) queda igual. Las
+arquitecturas más anchas y la más profunda son peores: no compensan con más capacidad lo que
+el 1a ya había elegido para memorizar. Más copias ayudan poco (1,6 puntos con k = 8) y k = 16
+vuelve a bajar; la brecha con el vecino más cercano en ruido alto sigue abierta.
+
+El final anterior (k = 1) quedó archivado en `resultados/ej1b/final_c0/`. Test del final
+nuevo (píxeles mal · % recuperadas, media sobre 5 semillas):
+
+| Modelo | p = 0 | 0,05 | 0,1 | 0,2 | 0,3 |
+|---|---|---|---|---|---|
+| DAE k = 1 (antes) | 0,03 · 99 % | 0,13 · 97 % | 0,57 · 90 % | 3,55 · 59 % | 8,58 · 25 % |
+| **DAE k = 8 (ahora)** | **0,00 · 100 %** | **0,08 · 98 %** | **0,50 · 92 %** | **3,50 · 60 %** | **8,51 · 26 %** |
+| Vecino más cercano | 0,00 · 100 % | 0,01 · 100 % | 0,12 · 98 % | 1,43 · 85 % | 5,88 · 51 % |
+| No hacer nada | 0,00 · 100 % | 1,74 · 48 % | 3,50 · 11 % | 7,14 · 0 % | 10,58 · 0 % |
+
+La mejora es chica pero consistente: con k = 8 el DAE ya no rompe ninguna letra limpia
+(0,00 píxeles mal) y gana 1–2 puntos de recuperadas en casi todos los niveles. No alcanza para
+cerrar la brecha con el vecino más cercano con p = 0,2–0,3.
+
+## Evaluación con ruido gaussiano (2026-11-16)
+
+El DAE se entrenó solo con bit-flip, pero la consigna pide distorsionar las entradas en
+distintos niveles. Se evalúa sin reentrenar con `conjuntos_gaussianos`: `X[idx] + N(0, σ²)`
+recortado a [0, 1] y **sin binarizar**. σ ∈ {0; 0,1; 0,2; 0,3; 0,4; 0,5}, K = 50 copias por
+letra, semilla 3000 (distinta de validación 1000 y test 2000). La entrada es continua, así
+que es otro problema: la métrica binariza la salida en 0,5 y muchos píxeles perturbados no
+llegan a cambiar de lado. Las referencias son devolver la entrada binarizada en 0,5 ("nada")
+y el vecino más cercano sobre esa entrada. Sale de `resultados/ej1b/gaussiano/test.csv`;
+figura `06_gaussiano.png`.
+
+Píxeles mal por letra · % recuperadas (media ± desvío sobre 5 semillas; las referencias son
+determinísticas):
+
+| Modelo | σ = 0 | 0,1 | 0,2 | 0,3 | 0,4 | 0,5 |
+|---|---|---|---|---|---|---|
+| No hacer nada | 0,00 · 100 % | 0,00 · 100 % | 0,23 · 98 % | 1,73 · 48 % | 3,67 · 10 % | 5,59 · 2 % |
+| AE del 1a | 0,10 ± 0,03 · 100 % | 0,97 ± 0,14 · 80 % | 3,27 ± 0,27 · 51 % | 5,79 ± 0,42 · 32 % | 8,09 ± 0,50 · 19 % | 9,74 ± 0,54 · 14 % |
+| **DAE** | 0,00 · 100 % | 0,00 · 100 % | 0,01 · 100 % | 0,05 ± 0,01 · 99 % | 0,28 ± 0,02 · 94 % | 1,12 ± 0,06 · 84 % |
+| Vecino más cercano | 0,00 · 100 % | 0,00 · 100 % | 0,00 · 100 % | 0,03 · 99 % | 0,16 · 97 % | 0,58 · 92 % |
+
+El DAE generaliza bien aunque nunca vio ruido gaussiano: con σ = 0,5 pasa de 5,59 píxeles mal
+en la entrada a 1,12, y recupera 84 % de las letras contra 2 % de la entrada. Queda cerca del
+vecino más cercano (0,58 · 92 %) y muy por encima del AE del 1a. La conclusión es que el
+bit-flip no es el único ruido que el DAE aprende a limpiar; el gaussiano, al ser continuo,
+es más fácil de corregir con el umbral de 0,5, no más difícil.
+
+## Notas para la presentación (2026-11-16)
+
+- **El latente satura desde 4, no "gana 8".** Con 4, 8 y 16 el promedio de píxeles mal queda
+  en 3,24, 3,06 y 3,07; 8 y 16 empatan dentro del desvío y la regla elige 8. La conclusión es
+  que a partir de 4 dimensiones el resultado se satura, no que 8 sea mejor que 16.
+- **p_train = 0** entrena las 10.000 épocas sin cortar (su validación son las letras limpias,
+  que siguen mejorando). Es, en la práctica, un AE con latente 8: copia bien las letras
+  limpias (0,00 píxeles mal con p = 0) pero no limpia ruido.
