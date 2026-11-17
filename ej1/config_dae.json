@@ -18,7 +18,9 @@
     "l2": 0.0,
     "max_epocas": 10000,
     "paciencia": 500,
-    "ruido": 0.1
+    "ruido": 0.1,
+    "copias_epoca": 1,
+    "monitor": "val_loss"
   },
   "experimentos": [
     {
@@ -42,6 +44,102 @@
         {"etiqueta": "0.2", "cambios": {"ruido": 0.2}},
         {"etiqueta": "0.3", "cambios": {"ruido": 0.3}},
         {"etiqueta": "mixto", "cambios": {"ruido": [0.0, 0.3]}}
+      ]
+    },
+    {
+      "id": "C",
+      "nombre": "arquitectura_y_copias",
+      "valores": [
+        {
+          "etiqueta": "60-40-20 k1",
+          "cambios": {
+            "ocultas": [60, 40, 20],
+            "copias_epoca": 1,
+            "latente": 8,
+            "ruido": 0.1,
+            "batch_size": 32
+          }
+        },
+        {
+          "etiqueta": "60-40-20 k8",
+          "cambios": {
+            "ocultas": [60, 40, 20],
+            "copias_epoca": 8,
+            "latente": 8,
+            "ruido": 0.1,
+            "batch_size": 32
+          }
+        },
+        {
+          "etiqueta": "60-40-20 k16",
+          "cambios": {
+            "ocultas": [60, 40, 20],
+            "copias_epoca": 16,
+            "latente": 8,
+            "ruido": 0.1,
+            "batch_size": 32
+          }
+        },
+        {
+          "etiqueta": "128-64 k1",
+          "cambios": {
+            "ocultas": [128, 64],
+            "copias_epoca": 1,
+            "latente": 8,
+            "ruido": 0.1,
+            "batch_size": 32
+          }
+        },
+        {
+          "etiqueta": "128-64 k8",
+          "cambios": {
+            "ocultas": [128, 64],
+            "copias_epoca": 8,
+            "latente": 8,
+            "ruido": 0.1,
+            "batch_size": 32
+          }
+        },
+        {
+          "etiqueta": "128-64 k16",
+          "cambios": {
+            "ocultas": [128, 64],
+            "copias_epoca": 16,
+            "latente": 8,
+            "ruido": 0.1,
+            "batch_size": 32
+          }
+        },
+        {
+          "etiqueta": "128-128-64 k1",
+          "cambios": {
+            "ocultas": [128, 128, 64],
+            "copias_epoca": 1,
+            "latente": 8,
+            "ruido": 0.1,
+            "batch_size": 32
+          }
+        },
+        {
+          "etiqueta": "128-128-64 k8",
+          "cambios": {
+            "ocultas": [128, 128, 64],
+            "copias_epoca": 8,
+            "latente": 8,
+            "ruido": 0.1,
+            "batch_size": 32
+          }
+        },
+        {
+          "etiqueta": "128-128-64 k16",
+          "cambios": {
+            "ocultas": [128, 128, 64],
+            "copias_epoca": 16,
+            "latente": 8,
+            "ruido": 0.1,
+            "batch_size": 32
+          }
+        }
       ]
     }
   ]

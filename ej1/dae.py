@@ -75,6 +75,26 @@ def conjuntos_ruidosos(
     return {p: (BitFlip(p)(X[idx], rng), idx) for p in niveles}
 
 
+def conjuntos_gaussianos(
+    X: np.ndarray, sigmas: list[float], k: int, semilla: int
+) -> dict[float, tuple[np.ndarray, np.ndarray]]:
+    """k copias con ruido gaussiano de cada letra de X para cada sigma.
+
+    Devuelve {sigma: (X_ruidoso, idx)}: X_ruidoso es (n·k, n_pixeles) con
+    X[idx] + N(0, sigma²) recortado a [0, 1] y sin binarizar. Un solo
+    generador, default_rng(semilla), recorre los sigmas en el orden dado.
+    """
+    rng = np.random.default_rng(semilla)
+    idx = np.tile(np.arange(X.shape[0]), k)
+    return {
+        s: (
+            np.clip(X[idx] + rng.normal(0.0, s, size=(len(idx), X.shape[1])), 0.0, 1.0),
+            idx,
+        )
+        for s in sigmas
+    }
+
+
 def medir_limpieza(X: np.ndarray, idx: np.ndarray, X_rec: np.ndarray) -> dict:
     """Píxeles mal de cada reconstrucción contra su letra limpia X[idx].
 
@@ -87,6 +107,11 @@ def medir_limpieza(X: np.ndarray, idx: np.ndarray, X_rec: np.ndarray) -> dict:
         "peor_letra": int(errores.max()),
         "recuperadas": float(np.mean(errores <= UMBRAL_RECUPERADA)),
     }
+
+
+def recuperadas(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """Fracción de letras con <= UMBRAL_RECUPERADA píxeles mal (métrica de fit)."""
+    return float(np.mean(pixel_errors(y_true, y_pred) <= UMBRAL_RECUPERADA))
 
 
 def vecino_mas_cercano(X_ruidoso: np.ndarray, X: np.ndarray) -> np.ndarray:
@@ -131,25 +156,38 @@ def entrenar_dae(
 ) -> tuple[Autoencoder, History, dict]:
     """Entrena con X ruidoso (BitFlip(config["ruido"])) como entrada y X limpio como objetivo.
 
-    Corta con EarlyStopping sobre val_loss (paciencia de la config) y vuelve a
-    los pesos de la mejor época. Devuelve el autoencoder, su historia y
-    {epocas, mejor_epoca, segundos, estado}.
+    Con copias_epoca = k entrena sobre k copias de cada letra por época, para
+    que el ruido se sortee k veces distinto. Corta con EarlyStopping sobre
+    config["monitor"] (val_loss o val_recuperadas) con la paciencia de la
+    config y vuelve a los pesos de la mejor época. Devuelve el autoencoder, su
+    historia y {epocas, mejor_epoca, segundos, estado}.
     """
     ae = armar_autoencoder(config, X.shape[1], np.random.default_rng(semilla))
     optimizer = _construir(get_optimizer, config["optimizador"], lr=config["lr"])
-    corte = EarlyStopping(patience=config["paciencia"], monitor="val_loss", restore_best=True)
+    monitor = config.get("monitor", "val_loss")
+    corte = EarlyStopping(
+        patience=config["paciencia"],
+        monitor=monitor,
+        mode="max" if monitor == "val_recuperadas" else "min",
+        restore_best=True,
+    )
+    copias = int(config.get("copias_epoca", 1))
+    if copias < 1:
+        raise ValueError(f"copias_epoca tiene que ser >= 1, llegó {copias}")
+    X_entreno = np.tile(X, (copias, 1))
     # Una corrida que diverge desborda antes de que fit la corte: no es un error.
     with np.errstate(over="ignore", invalid="ignore"):
         inicio = time.perf_counter()
         historia = ae.fit(
-            X,
-            X,
+            X_entreno,
+            X_entreno,
             optimizer=optimizer,
             loss=get_loss(config["perdida"]),
             epochs=config["max_epocas"],
             batch_size=config["batch_size"],
             validation=validacion,
             callbacks=[corte],
+            metrics={"recuperadas": recuperadas},
             l2=config["l2"],
             augment=BitFlip(config["ruido"]),
         )
@@ -220,6 +258,11 @@ def leer_filas_dae(ruta: Path) -> list[dict]:
     """Inversa de _escribir_csv: config como dict, números como int o float, None si vacío."""
     with open(ruta, encoding="utf-8", newline="") as f:
         return [{c: _convertir(c, v) for c, v in crudo.items()} for crudo in csv.DictReader(f)]
+
+
+def _normalizar_config(config: dict) -> dict:
+    """Config con los defaults de C para leer CSVs y finales anteriores al experimento C."""
+    return {"copias_epoca": 1, "monitor": "val_loss", **config}
 
 
 # --- Elección ---
@@ -318,7 +361,10 @@ def correr_dae(config_dae: dict, salida: Path, escribir: Callable[[str], None] =
             escribir(f"[{exp['id']}] ya existe {ruta.name}: se lee en vez de correr.")
             filas = leer_filas_dae(ruta)
             for fila in filas:
-                if fila["config"] != esperadas.get(fila["valor"]):
+                esperada = esperadas.get(fila["valor"])
+                if esperada is None or _normalizar_config(fila["config"]) != _normalizar_config(
+                    esperada
+                ):
                     raise RuntimeError(
                         f"{ruta.name} se corrió con otra config ({fila['valor']}): "
                         "borralo para volver a correr ese experimento."
@@ -405,8 +451,10 @@ def _guardar_final(
     """
     ruta_test = carpeta / "test.csv"
     if ruta_test.exists():
-        guardada = json.loads((carpeta / "config.json").read_text(encoding="utf-8"))
-        if guardada != config:
+        guardada = _normalizar_config(
+            json.loads((carpeta / "config.json").read_text(encoding="utf-8"))
+        )
+        if guardada != _normalizar_config(config):
             raise RuntimeError(f"{carpeta} es de otra config final: borrala para regenerarla.")
         escribir("[final] ya existe final/test.csv: no se vuelve a entrenar.")
         return

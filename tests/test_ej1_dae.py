@@ -4,12 +4,15 @@ import json
 import numpy as np
 import pytest
 
+from core.metrics import pixel_errors
 from ej1 import dae
 from ej1.barrido import aplicar
 from ej1.dae import (
     RUTA_CONFIG,
     RUTA_FINAL_1A,
+    _normalizar_config,
     cargar_ae_1a,
+    conjuntos_gaussianos,
     conjuntos_ruidosos,
     correr_dae,
     elegir_dae,
@@ -20,7 +23,7 @@ from ej1.dae import (
     vecino_mas_cercano,
 )
 from ej1.datos import cargar_font
-from ej1.graficos_dae import generar_figuras
+from ej1.graficos_dae import curvas_por_modelo, fig_gaussiano, generar_figuras
 
 CONFIG = json.loads(RUTA_CONFIG.read_text(encoding="utf-8"))
 BASE = CONFIG["base"]
@@ -59,6 +62,41 @@ def test_reproducible_y_distinto_con_otra_semilla():
     a = conjuntos_ruidosos(X, [0.1], k=5, semilla=1000)[0.1][0]
     b = conjuntos_ruidosos(X, [0.1], k=5, semilla=1000)[0.1][0]
     c = conjuntos_ruidosos(X, [0.1], k=5, semilla=2000)[0.1][0]
+    np.testing.assert_array_equal(a, b)
+    assert not np.array_equal(a, c)
+
+
+# --- Conjuntos gaussianos ---
+
+
+def test_gaussiano_sigma_cero_deja_las_letras_limpias():
+    X, _ = cargar_font()
+    X_r, idx = conjuntos_gaussianos(X, [0.0], k=2, semilla=3000)[0.0]
+    np.testing.assert_array_equal(X_r, X[idx])
+
+
+def test_gaussiano_mismas_formas_e_indices_que_bit_flip():
+    X, _ = cargar_font()
+    sigmas = [0.1, 0.3]
+    gaussianos = conjuntos_gaussianos(X, sigmas, k=3, semilla=3000)
+    ruidosos = conjuntos_ruidosos(X, sigmas, k=3, semilla=3000)
+    assert list(gaussianos) == sigmas
+    for s in sigmas:
+        X_g, idx_g = gaussianos[s]
+        X_r, idx_r = ruidosos[s]
+        assert X_g.shape == X_r.shape == (32 * 3, 35)
+        np.testing.assert_array_equal(idx_g, idx_r)
+
+
+def test_gaussiano_queda_en_rango_sin_binarizar_y_es_reproducible():
+    X, _ = cargar_font()
+    X_r, _ = conjuntos_gaussianos(X, [0.3], k=5, semilla=3000)[0.3]
+    assert X_r.min() >= 0.0 and X_r.max() <= 1.0
+    # No se binariza: hay valores intermedios.
+    assert np.any((X_r > 0.0) & (X_r < 1.0))
+    a = conjuntos_gaussianos(X, [0.1], k=5, semilla=3000)[0.1][0]
+    b = conjuntos_gaussianos(X, [0.1], k=5, semilla=3000)[0.1][0]
+    c = conjuntos_gaussianos(X, [0.1], k=5, semilla=4000)[0.1][0]
     np.testing.assert_array_equal(a, b)
     assert not np.array_equal(a, c)
 
@@ -118,7 +156,9 @@ def test_ae_1a_carga_las_5_semillas_y_reconstruye_las_letras():
 def test_base_es_la_config_final_del_1a():
     final_1a = json.loads((RUTA_FINAL_1A / "config.json").read_text(encoding="utf-8"))
     assert final_1a.pop("decaimiento") is None
-    propias = {k: BASE[k] for k in BASE if k not in ("paciencia", "ruido")}
+    propias = {
+        k: BASE[k] for k in BASE if k not in ("paciencia", "ruido", "copias_epoca", "monitor")
+    }
     assert propias == final_1a
 
 
@@ -195,6 +235,112 @@ def test_entrenar_dae_corta_por_paciencia_y_restaura_lo_mejor():
     assert info["epocas"] == info["mejor_epoca"] + 3 < 200
 
 
+def test_copias_epoca_triplica_las_actualizaciones(monkeypatch):
+    from core.optimizers import Adam
+
+    original = Adam.step
+    llamadas = []
+
+    def contar(self, params, grads):
+        llamadas.append(1)
+        return original(self, params, grads)
+
+    monkeypatch.setattr(Adam, "step", contar)
+    X, _ = cargar_font()
+    config = aplicar(BASE, {"max_epocas": 1, "paciencia": 10})
+    entrenar_dae(config, X, semilla=0, validacion=_validacion(X))
+    una = len(llamadas)
+    llamadas.clear()
+    entrenar_dae(aplicar(config, {"copias_epoca": 3}), X, semilla=0, validacion=_validacion(X))
+    assert una == 1
+    assert len(llamadas) == 3 * una
+
+
+def test_corte_por_recuperadas_restaura_la_mejor_epoca():
+    X, _ = cargar_font()
+    config = aplicar(
+        BASE, {"max_epocas": 40, "paciencia": 3, "monitor": "val_recuperadas", "lr": 0.02}
+    )
+    validacion = _validacion(X)
+    ae, historia, info = entrenar_dae(config, X, semilla=0, validacion=validacion)
+    recuperadas_epoca = historia.column("val_recuperadas")
+    assert np.isfinite(recuperadas_epoca).all()
+    mejor = info["mejor_epoca"]
+    assert recuperadas_epoca[mejor - 1] == np.max(recuperadas_epoca)
+    X_v, y_v = validacion
+    final = float(np.mean(pixel_errors(y_v, ae.predict(X_v)) <= dae.UMBRAL_RECUPERADA))
+    assert final == pytest.approx(recuperadas_epoca[mejor - 1])
+
+
+def test_copias_epoca_uno_y_val_loss_reproducen_el_entrenamiento_anterior():
+    from core.augmentation import BitFlip
+    from core.callbacks import EarlyStopping
+    from core.losses import get_loss
+    from core.optimizers import get_optimizer
+    from ej1.barrido import armar_autoencoder
+
+    X, _ = cargar_font()
+    config = aplicar(BASE, {"max_epocas": 5})
+    validacion = _validacion(X)
+    ae_nuevo, historia_nueva, _ = entrenar_dae(config, X, semilla=0, validacion=validacion)
+
+    ae_viejo = armar_autoencoder(config, X.shape[1], np.random.default_rng(0))
+    corte = EarlyStopping(patience=config["paciencia"], monitor="val_loss", restore_best=True)
+    historia_vieja = ae_viejo.fit(
+        X,
+        X,
+        optimizer=get_optimizer(config["optimizador"], lr=config["lr"]),
+        loss=get_loss(config["perdida"]),
+        epochs=config["max_epocas"],
+        batch_size=config["batch_size"],
+        validation=validacion,
+        callbacks=[corte],
+        l2=config["l2"],
+        augment=BitFlip(config["ruido"]),
+    )
+    np.testing.assert_array_equal(
+        historia_nueva.column("val_loss"), historia_vieja.column("val_loss")
+    )
+    for nuevo, viejo in zip(ae_nuevo.params, ae_viejo.params, strict=True):
+        np.testing.assert_array_equal(nuevo, viejo)
+
+
+def test_normalizar_config_completa_los_defaults_del_experimento_c():
+    vieja = {k: v for k, v in BASE.items() if k not in ("copias_epoca", "monitor")}
+    assert _normalizar_config(vieja) == _normalizar_config(BASE)
+
+
+def test_experimento_c_tiene_las_nueve_combinaciones():
+    exp = next(e for e in CONFIG["experimentos"] if e["id"] == "C")
+    ocultas = {tuple(v["cambios"]["ocultas"]) for v in exp["valores"]}
+    copias = {v["cambios"]["copias_epoca"] for v in exp["valores"]}
+    assert ocultas == {(60, 40, 20), (128, 64), (128, 128, 64)}
+    assert copias == {1, 8, 16}
+    assert len(exp["valores"]) == 9
+
+
+def test_fig_gaussiano_dibuja_pixeles_mal_y_recuperadas():
+    sigmas = [0.0, 0.1, 0.2]
+    filas = []
+    for modelo, base in (("dae", 0.5), ("nada", 1.0), ("vecino", 0.1), ("ae_1a", 2.0)):
+        semillas = (0, 1) if modelo in ("dae", "ae_1a") else (None,)
+        for semilla in semillas:
+            for s in sigmas:
+                filas.append(
+                    {
+                        "modelo": modelo,
+                        "semilla": semilla,
+                        "nivel": s,
+                        "pixeles_mal": base + s,
+                        "peor_letra": 3,
+                        "recuperadas": max(0.0, 1.0 - base - s),
+                    }
+                )
+    curvas = {m: curvas_por_modelo(filas, sigmas, m) for m in ("pixeles_mal", "recuperadas")}
+    fig = fig_gaussiano(curvas, sigmas, 2)
+    assert len(fig.axes) == 2
+
+
 # --- Smoke test ---
 
 
@@ -207,6 +353,7 @@ def _config_mini():
     mini["base"]["paciencia"] = 5
     mini["experimentos"][0]["valores"] = mini["experimentos"][0]["valores"][:2]
     mini["experimentos"][1]["valores"] = mini["experimentos"][1]["valores"][-2:]
+    mini["experimentos"][2]["valores"] = mini["experimentos"][2]["valores"][:2]
     return mini
 
 
@@ -218,8 +365,10 @@ def test_dae_mini_escribe_todo_y_se_puede_retomar(tmp_path, monkeypatch):
 
     a = leer_filas_dae(salida / "experimento_A_latente.csv")
     b = leer_filas_dae(salida / "experimento_B_ruido.csv")
+    c = leer_filas_dae(salida / "experimento_C_arquitectura_y_copias.csv")
     assert [f["valor"] for f in a] == ["2", "4"]
     assert [f["valor"] for f in b] == ["0.3", "mixto"]
+    assert [f["valor"] for f in c] == ["60-40-20 k1", "60-40-20 k8"]
     for nivel in ("0", "0.05", "0.1", "0.2", "0.3"):
         assert f"val_pixeles_mal_{nivel}" in a[0]
     assert b[1]["config"]["ruido"] == [0.0, 0.3]
@@ -242,13 +391,15 @@ def test_dae_mini_escribe_todo_y_se_puede_retomar(tmp_path, monkeypatch):
     assert len([f for f in test if f["modelo"] == "ae_1a"]) == 5 * 5
     assert (final / "historia_semilla_0.csv").exists()
 
-    # Los pesos finales reproducen la corrida del experimento B con la misma config.
+    # Los pesos finales reproducen la corrida del experimento que fijó la config final.
     X, _ = cargar_font()
     ae = dae.cargar_modelo(esperada, final / "pesos_semilla_0.npz", X.shape[1])
-    fila_b = next(f for f in b if f["config"] == esperada)
+    fila_final = next(
+        f for f in (*a, *b, *c) if _normalizar_config(f["config"]) == _normalizar_config(esperada)
+    )
     X_v, idx = conjuntos_ruidosos(X, NIVELES, k=2, semilla=1000)[0.1]
     assert medir_limpieza(X, idx, ae.predict(X_v))["pixeles_mal"] == pytest.approx(
-        fila_b["val_pixeles_mal_0.1"]
+        fila_final["val_pixeles_mal_0.1"]
     )
 
     # Pesos del latente 2 de A: se guardan y reproducen su fila; los del latente 4, no.

@@ -35,7 +35,9 @@
       "l2": 0.0,
       "max_epocas": 10000,
       "paciencia": 500,
-      "ruido": 0.1
+      "ruido": 0.1,
+      "copias_epoca": 1,
+      "monitor": "val_loss"
     },
     "experimentos": [
       {
@@ -115,6 +117,135 @@
             }
           }
         ]
+      },
+      {
+        "id": "C",
+        "nombre": "arquitectura_y_copias",
+        "valores": [
+          {
+            "etiqueta": "60-40-20 k1",
+            "cambios": {
+              "ocultas": [
+                60,
+                40,
+                20
+              ],
+              "copias_epoca": 1,
+              "latente": 8,
+              "ruido": 0.1,
+              "batch_size": 32
+            }
+          },
+          {
+            "etiqueta": "60-40-20 k8",
+            "cambios": {
+              "ocultas": [
+                60,
+                40,
+                20
+              ],
+              "copias_epoca": 8,
+              "latente": 8,
+              "ruido": 0.1,
+              "batch_size": 32
+            }
+          },
+          {
+            "etiqueta": "60-40-20 k16",
+            "cambios": {
+              "ocultas": [
+                60,
+                40,
+                20
+              ],
+              "copias_epoca": 16,
+              "latente": 8,
+              "ruido": 0.1,
+              "batch_size": 32
+            }
+          },
+          {
+            "etiqueta": "128-64 k1",
+            "cambios": {
+              "ocultas": [
+                128,
+                64
+              ],
+              "copias_epoca": 1,
+              "latente": 8,
+              "ruido": 0.1,
+              "batch_size": 32
+            }
+          },
+          {
+            "etiqueta": "128-64 k8",
+            "cambios": {
+              "ocultas": [
+                128,
+                64
+              ],
+              "copias_epoca": 8,
+              "latente": 8,
+              "ruido": 0.1,
+              "batch_size": 32
+            }
+          },
+          {
+            "etiqueta": "128-64 k16",
+            "cambios": {
+              "ocultas": [
+                128,
+                64
+              ],
+              "copias_epoca": 16,
+              "latente": 8,
+              "ruido": 0.1,
+              "batch_size": 32
+            }
+          },
+          {
+            "etiqueta": "128-128-64 k1",
+            "cambios": {
+              "ocultas": [
+                128,
+                128,
+                64
+              ],
+              "copias_epoca": 1,
+              "latente": 8,
+              "ruido": 0.1,
+              "batch_size": 32
+            }
+          },
+          {
+            "etiqueta": "128-128-64 k8",
+            "cambios": {
+              "ocultas": [
+                128,
+                128,
+                64
+              ],
+              "copias_epoca": 8,
+              "latente": 8,
+              "ruido": 0.1,
+              "batch_size": 32
+            }
+          },
+          {
+            "etiqueta": "128-128-64 k16",
+            "cambios": {
+              "ocultas": [
+                128,
+                128,
+                64
+              ],
+              "copias_epoca": 16,
+              "latente": 8,
+              "ruido": 0.1,
+              "batch_size": 32
+            }
+          }
+        ]
       }
     ]
   },
@@ -189,7 +320,9 @@
         "l2": 0.0,
         "max_epocas": 10000,
         "paciencia": 500,
-        "ruido": 0.1
+        "ruido": 0.1,
+        "copias_epoca": 1,
+        "monitor": "val_loss"
       }
     },
     {
@@ -284,7 +417,139 @@
         "l2": 0.0,
         "max_epocas": 10000,
         "paciencia": 500,
-        "ruido": 0.1
+        "ruido": 0.1,
+        "copias_epoca": 1,
+        "monitor": "val_loss"
+      }
+    },
+    {
+      "id": "C",
+      "nombre": "arquitectura_y_copias",
+      "valor_anterior": "60-40-20 k1",
+      "ganador": "60-40-20 k8",
+      "criterio": "recuperadas",
+      "resumen": {
+        "60-40-20 k1": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.0372187499999996,
+          "pixeles_mal_desvio": 0.12217378239814278,
+          "recuperadas_media": 0.6801875,
+          "recuperadas_desvio": 0.007996581300780969,
+          "epocas_media": 1680.0,
+          "epocas_desvio": 129.75168592353626,
+          "segundos_media": 52.28801930919999,
+          "divergidas": 0
+        },
+        "60-40-20 k8": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.0075312500000004,
+          "pixeles_mal_desvio": 0.08806592933794669,
+          "recuperadas_media": 0.69634375,
+          "recuperadas_desvio": 0.009419555581010689,
+          "epocas_media": 990.4,
+          "epocas_desvio": 184.24793078892367,
+          "segundos_media": 32.32586750380015,
+          "divergidas": 0
+        },
+        "60-40-20 k16": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.0927812500000003,
+          "pixeles_mal_desvio": 0.19544324998536972,
+          "recuperadas_media": 0.682625,
+          "recuperadas_desvio": 0.006558220330718538,
+          "epocas_media": 786.2,
+          "epocas_desvio": 137.8502811023612,
+          "segundos_media": 39.47716012959991,
+          "divergidas": 0
+        },
+        "128-64 k1": {
+          "corridas": 5,
+          "pixeles_mal_media": 2.9189374999999997,
+          "pixeles_mal_desvio": 0.09806062528083717,
+          "recuperadas_media": 0.6705,
+          "recuperadas_desvio": 0.010691085838503483,
+          "epocas_media": 1347.4,
+          "epocas_desvio": 403.8518292641498,
+          "segundos_media": 44.83550249700011,
+          "divergidas": 0
+        },
+        "128-64 k8": {
+          "corridas": 5,
+          "pixeles_mal_media": 2.90284375,
+          "pixeles_mal_desvio": 0.06510483957985548,
+          "recuperadas_media": 0.6824375,
+          "recuperadas_desvio": 0.009342129876264801,
+          "epocas_media": 902.0,
+          "epocas_desvio": 150.4476653192066,
+          "segundos_media": 49.07969159479999,
+          "divergidas": 0
+        },
+        "128-64 k16": {
+          "corridas": 5,
+          "pixeles_mal_media": 2.9653437499999997,
+          "pixeles_mal_desvio": 0.12810977424776182,
+          "recuperadas_media": 0.6830312500000001,
+          "recuperadas_desvio": 0.010229065893936731,
+          "epocas_media": 661.4,
+          "epocas_desvio": 143.97499782948427,
+          "segundos_media": 61.755248479800045,
+          "divergidas": 0
+        },
+        "128-128-64 k1": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.2126562499999998,
+          "pixeles_mal_desvio": 0.04485572575282334,
+          "recuperadas_media": 0.6585,
+          "recuperadas_desvio": 0.004972581070229016,
+          "epocas_media": 1281.0,
+          "epocas_desvio": 307.60933015758803,
+          "segundos_media": 70.10311802000005,
+          "divergidas": 0
+        },
+        "128-128-64 k8": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.2520312500000004,
+          "pixeles_mal_desvio": 0.062258027688955414,
+          "recuperadas_media": 0.65334375,
+          "recuperadas_desvio": 0.007049109263321852,
+          "epocas_media": 659.6,
+          "epocas_desvio": 59.99416638307428,
+          "segundos_media": 103.67625821780011,
+          "divergidas": 0
+        },
+        "128-128-64 k16": {
+          "corridas": 5,
+          "pixeles_mal_media": 3.2746874999999998,
+          "pixeles_mal_desvio": 0.13438662740391996,
+          "recuperadas_media": 0.65225,
+          "recuperadas_desvio": 0.012563607693702059,
+          "epocas_media": 561.0,
+          "epocas_desvio": 19.924858845171276,
+          "segundos_media": 114.67430982040005,
+          "divergidas": 0
+        }
+      },
+      "config": {
+        "ocultas": [
+          60,
+          40,
+          20
+        ],
+        "latente": 8,
+        "activacion_ocultas": "tanh",
+        "activacion_latente": "identity",
+        "activacion_salida": "sigmoid",
+        "inicializacion": "he",
+        "optimizador": "adam",
+        "lr": 0.01,
+        "batch_size": 32,
+        "perdida": "binary_crossentropy",
+        "l2": 0.0,
+        "max_epocas": 10000,
+        "paciencia": 500,
+        "ruido": 0.1,
+        "copias_epoca": 8,
+        "monitor": "val_loss"
       }
     }
   ],
@@ -306,6 +571,8 @@
     "l2": 0.0,
     "max_epocas": 10000,
     "paciencia": 500,
-    "ruido": 0.1
+    "ruido": 0.1,
+    "copias_epoca": 8,
+    "monitor": "val_loss"
   }
 }

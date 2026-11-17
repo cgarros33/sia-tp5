@@ -25,7 +25,7 @@ def _fila_china(posicion: int, caracter: str) -> list[str]:
     return [str(v) for v in pixeles] + ["0", caracter]
 
 
-def test_leer_chino_invierte_y_normaliza_por_maximo(tmp_path):
+def test_leer_chino_invierte_normaliza_y_binariza(tmp_path):
     preparador = _cargar("preparar_ej2")
     ruta = tmp_path / "chino.csv"
     with open(ruta, "w", newline="", encoding="utf-8") as f:
@@ -39,9 +39,8 @@ def test_leer_chino_invierte_y_normaliza_por_maximo(tmp_path):
     assert X.shape == (15, 1024)
     assert y.tolist() == list(range(15))
     assert len(clases) == 15
-    # El trazo más intenso queda negro (0) y el fondo blanco (1).
-    assert X.min() == pytest.approx(0.0)
-    assert X.max() == pytest.approx(1.0)
+    # Todo queda en {0, 1}: el trazo más intenso en 0 y el fondo en 1.
+    assert set(np.unique(X)) == {0.0, 1.0}
     plano = X[0].reshape(32, 32)
     assert plano[0, 0] == pytest.approx(0.0)
     assert plano[5, 5] == pytest.approx(1.0)

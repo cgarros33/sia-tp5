@@ -80,7 +80,10 @@ J_bien = L_mean + (β / d) · R_mean
 
 El factor global `1/d` no cambia el minimizador ni el orden de magnitud relativo de los dos
 términos; lo que cambia es el peso relativo, que ahora es `β`. Con `β = 1` se recupera el
-VAE estándar (el ELBO sin ponderar) cuando la reconstrucción es una suma por muestra.
+VAE estándar (el ELBO sin ponderar) cuando la reconstrucción es una suma por muestra. Si el
+decoder es gaussiano con varianza fija `σ²`, el peso equivalente es `β = 2σ²`: con MSE y
+`β = 1` el decoder implícito tiene `σ² = ½`. La frase "β = 1 recupera el ELBO" vale para esa
+varianza; para otra `σ²` hay que comparar contra `2σ²`.
 
 Equivalentemente, si se define la reconstrucción sumada por muestra,
 

@@ -13,7 +13,13 @@ from ej2.modelos import (
     construir_vae_imagen,
     construir_vae_tabular,
 )
-from ej2.vae_exp import CalentamientoKL, _aplicar_nivel, _elegir
+from ej2.vae_exp import (
+    CalentamientoKL,
+    _aplicar_nivel,
+    _elegir,
+    _evaluar_nivel,
+    _valores_perdida,
+)
 
 
 @pytest.mark.parametrize("latente", [4, 8, 16])
@@ -172,6 +178,49 @@ def test_elegir_beta_no_elige_uno_colapsado_aunque_reconstruya_igual():
     filas = _filas_beta([("0.01", 0.0200, 4), ("0.1", 0.0205, 4), ("1.0", 0.0205, 0)])
     ganador, _detalle = _elegir(paso, filas, {"latente": 4}, {"perdidas": ["mse"]})
     assert ganador == "0.1"
+
+
+def test_perdida_se_saltea_si_el_dataset_tiene_una_sola():
+    paso = {"valores": ["mse"]}
+    assert _valores_perdida(paso, {"perdidas": ["binary_crossentropy"]}) == (
+        ["binary_crossentropy"],
+        True,
+    )
+    assert _valores_perdida(paso, {"perdidas": ["mse"]}) == (["mse"], True)
+    paso = {"valores": ["mse", "binary_crossentropy", "otra"]}
+    assert _valores_perdida(paso, {"perdidas": ["mse", "binary_crossentropy"]}) == (
+        ["mse", "binary_crossentropy"],
+        False,
+    )
+
+
+def test_evaluar_nivel_exige_recon_menor_al_80_por_ciento_del_baseline(monkeypatch):
+    from ej2 import vae_exp
+
+    X = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [1.0, 1.0, 1.0],
+            [0.2, 0.8, 0.1],
+            [0.9, 0.1, 0.7],
+        ]
+    )
+    split = np.array(["train", "train", "train", "val", "val"])
+    monkeypatch.setattr(vae_exp, "_cargar", lambda nombre, tipo: (X, np.zeros(len(X)), split, None))
+    media = np.broadcast_to(X[split == "train"].mean(axis=0), X[split == "val"].shape)
+    baseline = float(MSE().value(X[split == "val"], media))
+    assert baseline > 0.0
+
+    fila = {"unidades_activas": 4.0, "kl_medio": 1.0, "val_recon": 0.79 * baseline}
+    aceptado, detalle = _evaluar_nivel("chino", {"tipo": "imagen"}, {"latente": 4}, [fila])
+    assert aceptado
+    assert detalle["umbral_baseline"] == pytest.approx(0.8)
+    assert detalle["ratio_baseline"] == pytest.approx(0.79)
+
+    fila["val_recon"] = 0.81 * baseline
+    rechazado, _detalle = _evaluar_nivel("chino", {"tipo": "imagen"}, {"latente": 4}, [fila])
+    assert not rechazado
 
 
 def test_aplicar_nivel_cambia_beta_free_bits_y_epocas():

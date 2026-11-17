@@ -36,7 +36,7 @@ RESULTADOS = RAIZ / "resultados" / "ej2"
 RES_F1 = (32, 32)
 RES_NBA = (30, 36)
 RES_CHINO = (32, 32)
-POR_CLASE_CHINO = 20
+POR_CLASE_CHINO = 100
 SEMILLA_SPLIT = 2026
 
 
@@ -432,12 +432,13 @@ def preparar_nba(forzar: bool = False) -> dict:
 
 
 def _leer_chino(ruta: Path, por_clase: int = POR_CLASE_CHINO) -> tuple[np.ndarray, np.ndarray, list[str]]:
-    """Lee `por_clase` filas por carácter, las baja a 32×32 y las invierte.
+    """Lee `por_clase` filas por carácter, las baja a 32×32, las invierte y las binariza.
 
     El CSV trae 64×64 con fondo negro (0) y trazo claro (255). Se promedia cada
     bloque 2×2, se normaliza por el máximo de la imagen (el promedio diluye el
     trazo) y se invierte: fondo blanco 1.0 y trazo negro 0.0. Sin la inversión
-    los caracteres quedan casi invisibles sobre negro.
+    los caracteres quedan casi invisibles sobre negro. La imagen invertida se
+    binariza en 0.5 para que la entrada sea binaria, como en el resto del TP.
     """
     X, y, clases = [], [], []
     indice: dict[str, int] = {}
@@ -458,6 +459,7 @@ def _leer_chino(ruta: Path, por_clase: int = POR_CLASE_CHINO) -> tuple[np.ndarra
             if maximo > 0.0:
                 chico = chico / maximo
             chico = 1.0 - chico
+            chico = (chico >= 0.5).astype(np.float32)
             X.append(chico.ravel())
             y.append(indice[caracter])
             conteo[caracter] += 1
@@ -492,6 +494,8 @@ def preparar_chino(forzar: bool = False, guardar_png: bool = False) -> dict:
         "semilla_split": SEMILLA_SPLIT,
         "por_clase": POR_CLASE_CHINO,
         "invertido": True,
+        "binarizado": True,
+        "umbral": 0.5,
         "clases": caracteres,
         "conteos": {s: int(np.sum(split == s)) for s in ("train", "val", "test")},
     }

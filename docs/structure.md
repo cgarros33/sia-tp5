@@ -25,7 +25,9 @@ ej1/                   Exercise 1a: basic autoencoder on font.h (spec: docs/cont
   graficos.py          Figures; reads only from resultados/ej1/, writes resultados/ej1/figuras/
   config_dae.json      1b: base config, noise levels, noisy val/test seeds, experiment grids
   dae.py               1b experiments; writes only to resultados/ej1b/
+  gaussiano.py         1b: evaluates the final DAE with Gaussian noise; writes resultados/ej1b/gaussiano/
   graficos_dae.py      1b figures; reads only from resultados/ej1b/, writes resultados/ej1b/figuras/
+  verificacion_c3.py   1a C3: batch size and loss with their own lr; writes resultados/ej1/verificacion/c3/
 ej2/                   Exercise 2: VAE on four datasets (spec: docs/context/ej2-vae.md,
                        corrections: docs/context/ej2-vae-fix.md, theory: ej2-kl-fix.md)
   datos.py             Loads processed .npz; splits and the flag scaler (train only)
@@ -37,11 +39,12 @@ ej2/                   Exercise 2: VAE on four datasets (spec: docs/context/ej2-
 tests/                 pytest suite, one file per core module (test_ej1_*.py for ej1/)
 data/                  Datasets (font.h, flags_tricolor.csv, raw images and chineseMNIST.csv)
 data/procesadas/       Processed .npz, PNGs and F1 manifests (committed)
-resultados/ej1/        Sweep output: one CSV per step, elecciones.json, final/ (weights, history)
-resultados/ej1b/       1b output: one CSV per experiment, elecciones.json, final/ (weights, test.csv)
+resultados/ej1/        Sweep output: one CSV per step, elecciones.json, final/, verificacion/ and verificacion/c3/
+resultados/ej1b/       1b output: one CSV per experiment, elecciones.json, final/ (weights, test.csv), final_c0/ and gaussiano/
 resultados/ej2/        VAE output: dedup manifests, sweep CSVs, final/ and latent_4/16 (weights, figures)
 resultados/ej2_old/    Pre-correction VAE output, archived for comparison
 resultados/ej2_beta001/  nba, f1 and banderas with the old beta rule (beta = 0.01), archived for comparison
+resultados/ej2/chino_300_mse/  Chino with 20 images/class, MSE and beta = 0.01, archived before option B
 utils/                 Standalone data scripts (excluded from ruff)
 docs/context/          Assignment, course notes and exercise specs (source of truth)
 check-cicd.py          Local CI: creates .venv, installs requirements, runs all checks
@@ -100,7 +103,9 @@ the standard VAE objective. `kl_divergence` reports the undivided mean KL (a met
 - Exercise 1a sweep: `python3 -m ej1.barrido` (resumable: steps whose CSV exists are skipped)
 - Exercise 1a figures: `python3 -m ej1.graficos`
 - Exercise 1b experiments: `python3 -m ej1.dae` (resumable, like the 1a sweep)
+- Exercise 1b Gaussian-noise evaluation: `python3 -m ej1.gaussiano`
 - Exercise 1b figures: `python3 -m ej1.graficos_dae`
+- Exercise 1a C3 (batch and loss with their own lr): `python3 -m ej1.verificacion_c3`
 - Exercise 2 data: `python3 utils/preparar_ej2.py --todo` (dedup first: `--dedup-f1`)
 - Exercise 2 sweep: `python3 -m ej2.vae_exp --dataset nba --fase barrido`
 - Exercise 2 final models: `python3 -m ej2.vae_exp --dataset nba --fase final`

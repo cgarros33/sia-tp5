@@ -341,7 +341,9 @@ promediado por píxel está dominado por el fondo blanco: el trazo ocupa ~1 % de
 la red prefiere el fondo. Un diagnóstico con BCE + sigmoid y latente 16 dio el mismo aspecto
 (MSE 0.0070, KL 96). No es colapso: es un problema de peso por píxel. Las palancas siguientes
 son un loss ponderado por trazo, más capacidad/épocas o binarizar la entrada; no tocar el
-warm-up. Se deja documentado, no se cambia el plan aprobado.
+warm-up. Se deja documentado, no se cambia el plan aprobado. El intento de la opción B
+(1.500 imágenes, binarización y BCE) está en §10: tampoco alcanza el 0,8 × baseline, así que
+chino queda fuera de la entrega.
 
 ### 7.2 Tiempos y artefactos
 
@@ -456,3 +458,59 @@ Figuras nuevas:
 - `11_interpolacion.png`: interpolación entre dos códigos de test. En NBA el AE y el VAE se
   ven parecidos: entre dos puntos de datos los dos latentes son continuos. La diferencia está
   lejos de los datos, que es adonde cae z ~ N(0, I) en el AE.
+
+## 9. Notas para la presentación (2026-11-16)
+
+- **Latente 16:** reconstruye peor que con β = 0,01 (NBA 0,0158 → 0,0195; banderas
+  0,0103 → 0,0313) porque el β más alto apaga dimensiones (en F1 quedan 7,6 de 16 activas).
+  En banderas, además, el 0,0103 anterior venía en parte de pesos del warm-up: el mínimo de
+  `val_recon` durante el warm-up era 0,008–0,010 y después 0,015–0,021. No es que el modelo
+  nuevo "empeoró": cambió el objetivo.
+- **F1:** el split no es disjunto por piloto y solo se deduplicó por hash exacto. Un mismo
+  piloto puede tener fotos distintas en train y en test, y hay casi-duplicados entre ambos.
+  Para un VAE generativo se acepta, pero hay que decirlo: las métricas de test de F1 no miden
+  generalización a pilotos nuevos.
+- **Banderas:** validación de 7 filas y test de 6. Las elecciones y las métricas por dataset
+  son ruidosas; conviene mostrarlas como ejemplo cualitativo y no como una comparación fina.
+- **`00_resumen.png`:** la fila de muestras de `N(0, I)` queda debajo de los nombres de
+  jugadores/países, con los que no tiene relación. La figura ahora lo aclara en el título.
+- **β y varianza:** con MSE, β = 1 equivale a un decoder gaussiano con σ² = ½; la
+  equivalencia general es β = 2σ² (ver `ej2-kl-fix.md` §4).
+
+## 10. Chino: intento de corrección (2026-11-16)
+
+Se intentó la opción B del plan de pendientes: volver a 100 imágenes por clase (1.500 en
+total, split 1.200/150/150), binarizar la entrada en 0,5 y entrenar con salida sigmoide y
+BCE. También se endureció `_evaluar_nivel` para exigir `recon < 0,8 × baseline` (la imagen
+media de train) y se corrigió el barrido para que, si el dataset tiene una sola pérdida, el
+paso 5 se saltee y use esa pérdida en vez de intentar correr `mse`.
+
+El barrido del nivel 0 terminó. La config ganadora fue latente 4, capacidad 256–128, β = 0,1
+y lr = 0,0003. El latente ya no colapsa: 4/4 unidades activas y KL = 10,7. Pero la
+reconstrucción de validación es 0,0121 contra un baseline de 0,0139, o sea **0,87 × la imagen
+media**, por encima del 0,8 exigido. El nivel 0 no se acepta:
+
+| Métrica | Valor |
+|---|---|
+| latente | 4 |
+| capacidad | 256–128 |
+| β | 0,1 |
+| lr | 0,0003 |
+| unidades activas | 4/4 |
+| KL | 10,7 |
+| `val_recon` | 0,0121 |
+| baseline (imagen media) | 0,0139 |
+| `recon / baseline` | **0,87** (se exige < 0,80) |
+
+La binarización y el BCE sí arreglan el colapso y hacen que las imágenes de entrada se vean
+legibles (`resultados/ej2/chino_00.png` … `chino_14.png`), pero el VAE no reconstruye los
+caracteres: sigue devolviendo una mancha cercana a la imagen media. No es un problema del
+preprocesamiento. La conclusión es la de la opción A: **chino queda fuera de la entrega**;
+NBA, F1 y banderas cubren el ejercicio. Los resultados de este intento quedan como evidencia
+en `resultados/ej2/chino/` (barrido nivel 0, sin final); los resultados viejos de 20
+imágenes/clase y MSE quedaron en `resultados/ej2/chino_300_mse/`. No se borró nada.
+
+No se completó un final de 1.000 épocas: dos diagnósticos de una semilla (latente 4 y 16)
+se cortaron a los 30 minutos porque el criterio ya fallaba en la etapa de barrido y no
+cambiaban la decisión. Si en el futuro se quiere insistir, las palancas son más épocas de
+barrido, una pérdida ponderada por trazo o el latente 16; no hace falta tocar el warm-up.

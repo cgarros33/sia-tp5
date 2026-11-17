@@ -77,11 +77,18 @@ def curvas_por_modelo(filas: list[dict], niveles: list[float], medida: str) -> d
     return curvas
 
 
-def _dibujar_referencias(ax, refs: dict[str, tuple], niveles: list[float], escala: float) -> None:
+def _dibujar_referencias(
+    ax, refs: dict[str, tuple], niveles: list[float], escala: float, nombres: dict | None = None
+) -> None:
     for modelo, (nombre, color, estilo) in REFERENCIAS.items():
         medias, _ = refs[modelo]
         ax.plot(
-            niveles, escala * medias, color=color, linestyle=estilo, linewidth=1.5, label=nombre
+            niveles,
+            escala * medias,
+            color=color,
+            linestyle=estilo,
+            linewidth=1.5,
+            label=(nombres or {}).get(modelo, nombre),
         )
 
 
@@ -190,6 +197,55 @@ def fig_final(curvas: dict[str, dict], niveles: list[float]) -> Figure:
         ax.set_title(titulo, loc="left")
     paneles[0].legend(loc="upper left")
     _titulo(fig, "Resultado final en test (media ± desvío entre semillas)")
+    return fig
+
+
+# --- 4. Gaussiano ---
+
+
+def fig_gaussiano(curvas: dict[str, dict], sigmas: list[float], n_semillas: int) -> Figure:
+    """curvas: {medida: {modelo: (medias, desvios)}} con el DAE y las referencias."""
+    fig = Figure(figsize=(11, 4.2), layout="constrained")
+    paneles = fig.subplots(1, 2)
+    nombres = {
+        "nada": "no hacer nada (entrada binarizada en 0,5)",
+        "ae_1a": "AE del 1a (sin ruido)",
+        "vecino": "vecino más cercano sobre la entrada binarizada",
+    }
+    for ax, medida, escala, titulo in zip(
+        paneles,
+        ("pixeles_mal", "recuperadas"),
+        (1, 100),
+        ("Píxeles mal por letra (promedio)", "Letras recuperadas (≤ 1 píxel mal), %"),
+        strict=True,
+    ):
+        _dibujar_referencias(ax, curvas[medida], sigmas, escala, nombres)
+        medias, desvios = curvas[medida]["dae"]
+        ax.errorbar(
+            sigmas,
+            escala * medias,
+            yerr=escala * desvios,
+            color=SERIES[0],
+            marker="o",
+            markersize=4,
+            capsize=3,
+            linewidth=2.5,
+            label="DAE elegido (entrenado con bit-flip)",
+        )
+        if escala == 1:
+            for s, m in zip(sigmas, medias, strict=True):
+                ax.annotate(
+                    f"{m:.2f}", (s, m), xytext=(-6, 8), textcoords="offset points",
+                    ha="right", color=SERIES[0],
+                )  # fmt: skip
+        ax.set_xticks(sigmas)
+        ax.set_xlabel("σ del ruido gaussiano")
+        ax.set_title(titulo, loc="left")
+    paneles[0].legend(loc="upper left")
+    _titulo(
+        fig,
+        f"Ruido gaussiano en test: entrada continua (media ± desvío entre {n_semillas} semillas)",
+    )
     return fig
 
 
@@ -328,6 +384,17 @@ def generar_figuras(resultados: Path) -> list[Path]:
         )
         fig = fig_latente_dae(ae_2.encode(X_r), idx, ae_2.encode(X), etiquetas, titulo)
         _guardar(fig, figuras / "05_latente_dae.png", escritas)
+
+        # 6. Ruido gaussiano, si ej1.gaussiano ya escribió su CSV.
+        ruta_gaussiano = resultados / "gaussiano" / "test.csv"
+        if ruta_gaussiano.exists():
+            gaussiano = leer_filas_dae(ruta_gaussiano)
+            sigmas = sorted({f["nivel"] for f in gaussiano})
+            n_semillas = len({f["semilla"] for f in gaussiano if f["modelo"] == "dae"})
+            fig = fig_gaussiano(
+                {m: curvas_por_modelo(gaussiano, sigmas, m) for m in medidas}, sigmas, n_semillas
+            )
+            _guardar(fig, figuras / "06_gaussiano.png", escritas)
     return escritas
 
 
